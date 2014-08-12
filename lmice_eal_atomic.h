@@ -1,0 +1,4 @@
+#ifndef LMICE_EAL_ATOMIC_H
+#define LMICE_EAL_ATOMIC_H
+
+#endif // LMICE_EAL_ATOMIC_H

@@ -1,0 +1,4 @@
+#ifndef LMICE_EAL_ENDIAN_H
+#define LMICE_EAL_ENDIAN_H
+
+#endif // LMICE_EAL_ENDIAN_H

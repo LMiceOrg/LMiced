@@ -1,0 +1,4 @@
+#ifndef LMICE_JSON_UTIL_H
+#define LMICE_JSON_UTIL_H
+
+#endif // LMICE_JSON_UTIL_H

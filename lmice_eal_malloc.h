@@ -1,0 +1,4 @@
+#ifndef LMICE_EAL_MALLOC_H
+#define LMICE_EAL_MALLOC_H
+
+#endif // LMICE_EAL_MALLOC_H
