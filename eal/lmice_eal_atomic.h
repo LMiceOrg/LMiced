@@ -29,7 +29,7 @@ extern "C" {
 
     #define eal_synchronize() __sync_synchronize()
 #else
-    #error(No atomic implementation!)
+    //#error(No atomic implementation!)
 #endif
 
 #ifdef __cplusplus
