@@ -1,14 +1,15 @@
 #ifndef LMICE_CORE_H
 #define LMICE_CORE_H
 #include <stdio.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 struct lmice_environment_s
 {
     void* addr;
     void* board;
-    pid_t pid;
-    pid_t ppid;
+    int32_t pid;
+    int32_t ppid;
     FILE* logfd;
 
 };
