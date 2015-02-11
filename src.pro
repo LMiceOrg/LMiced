@@ -17,10 +17,10 @@ SOURCES += main.c \
 OTHER_FILES += \
     ../doc/About_cn.txt \
     ../doc/Console_Color.txt \
-    ../test/eal_endian_test.py \
-    ../test/eal_shm_test.py \
-    ../test/eal_hash_test.py \
-    ../test/global_defines.py
+    test/eal_endian_test.py \
+    test/eal_shm_test.py \
+    test/eal_hash_test.py \
+    test/global_defines.py
 
 HEADERS += \
     lmice_core.h \
@@ -33,7 +33,12 @@ HEADERS += \
     eal/lmice_eal_align.h \
     eal/lmice_eal_atomic.h \
     eal/lmice_eal_spinlock.h \
-    eal/lmice_eal_malloc.h
+    eal/lmice_eal_malloc.h \
+    eal/lmice_eal_thread.h \
+    eal/lmice_eal_thread_win.h
+
+#Common config
+INCLUDEPATH += eal
 
 macx-clang*{
 message("MacX Darwin")
@@ -43,13 +48,16 @@ LIBS += -L../lib/jansson/bin/lib
 LIBS += -ljansson
 
 QMAKE_CFLAGS += -std=c89 -funit-at-a-time -Wno-unused-function
-DEFINES += inline=__inline
-
+DEFINES += inline=__inline__
+DEFINES += forceinline=__attribute__((always_inline))
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 }
 
 win32-msvc* {
-QMAKE_CFLAGS += -std=c89 -funit-at-a-time -Wno-unused-function
+
+message("Windows MSVC")
+QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
+DEFINES += forceinline=__forceinline
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 }
