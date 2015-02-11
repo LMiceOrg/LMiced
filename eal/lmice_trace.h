@@ -1,7 +1,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#include <pthread.h>
+#include "lmice_eal_thread.h"
 
 #include <time.h>
 #include <stdio.h>
