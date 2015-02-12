@@ -35,7 +35,9 @@ HEADERS += \
     eal/lmice_eal_spinlock.h \
     eal/lmice_eal_malloc.h \
     eal/lmice_eal_thread.h \
-    eal/lmice_eal_thread_win.h
+    eal/lmice_eal_thread_win.h \
+    eal/lmice_eal_thread_pthread.h \
+    eal/lmice_eal_common.h
 
 #Common config
 INCLUDEPATH += eal
@@ -49,7 +51,6 @@ LIBS += -ljansson
 
 QMAKE_CFLAGS += -std=c89 -funit-at-a-time -Wno-unused-function
 DEFINES += inline=__inline__
-DEFINES += forceinline=__attribute__((always_inline))
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 }
 
@@ -58,6 +59,5 @@ win32-msvc* {
 message("Windows MSVC")
 QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
-DEFINES += forceinline=__forceinline
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 }

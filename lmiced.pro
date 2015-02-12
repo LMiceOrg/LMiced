@@ -28,7 +28,9 @@ state/state_action.h		state/state_serialize_engine.h \
 state/state_event.h		state/state_serialize_json.h \
 state/state_guard.h		state/state_transition.h \
 state/state_machine.h		state/state_type.h \
-    system/system_master.h
+    system/system_master.h \
+    eal/lmice_eal_thread_pthread.h \
+    eal/lmice_eal_common.h
 
 QMAKE_CFLAGS += -std=c89 -funit-at-a-time -Wno-unused-function
 QMAKE_CFLAGS += -Dinline=__inline

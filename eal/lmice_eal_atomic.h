@@ -1,10 +1,6 @@
 #ifndef LMICE_EAL_ATOMIC_H
 #define LMICE_EAL_ATOMIC_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #if defined(__GNUC__) && __GNUC__ > 3
     #define eal_fetch_and_add32(ptr, value) __sync_fetch_and_add(ptr, value)
     #define eal_fetch_and_add64(ptr, value) __sync_fetch_and_add(ptr, value)
@@ -29,11 +25,8 @@ extern "C" {
 
     #define eal_synchronize() __sync_synchronize()
 #else
-    //#error(No atomic implementation!)
+    #error(No atomic implementation!)
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif /** LMICE_EAL_ATOMIC_H */

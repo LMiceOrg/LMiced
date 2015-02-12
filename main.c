@@ -21,6 +21,10 @@
 
 #include <pthread.h>
 
+#if !defined(__GNUC__)
+#define __attribute__(x)
+#endif
+
 /**
  * @brief lmice_env the LMICE Abstract Environment Layer object.
  */
@@ -190,7 +194,7 @@ destroy_shm(lmice_shm_t* shm)
     return shm_unlink(shm->name);
 }
 
-int main(int argc, char* const* argv)
+int main(int argc __attribute__((unused)), char* const* argv __attribute__((unused)))
 {
 
     EAL_STRUCT_ALIGN(long);

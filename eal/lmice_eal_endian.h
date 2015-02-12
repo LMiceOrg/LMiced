@@ -1,6 +1,8 @@
 #ifndef LMICE_EAL_ENDIAN_H
 #define LMICE_EAL_ENDIAN_H
 
+#include "lmice_eal_common.h"
+
 static inline int forceinline
 eal_is_little_endian()
 {
@@ -17,4 +19,4 @@ eal_is_big_endian()
 }
 
 
-#endif /* LMICE_EAL_ENDIAN_H */
+#endif /** LMICE_EAL_ENDIAN_H */

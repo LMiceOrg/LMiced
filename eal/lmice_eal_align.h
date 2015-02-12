@@ -1,10 +1,6 @@
 #ifndef LMICE_EAL_ALIGN_H
 #define LMICE_EAL_ALIGN_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #if defined(__GNUC__)  && __GNUC__ > 4
 #define COMPILE_TIME_ASSERT(X) ({ extern int __attribute__((error("assertion failure: '" #X "' not true"))) compile_time_check(); ((X)?0:compile_time_check()),0; })
 
@@ -18,9 +14,5 @@ extern "C" {
 #endif
 
 #define EAL_STRUCT_ALIGN(x) COMPILE_TIME_ASSERT(sizeof(x) % 8 == 0)
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /** LMICE_EAL_ALIGN_H */
