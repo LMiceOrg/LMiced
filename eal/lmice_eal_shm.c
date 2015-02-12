@@ -1,16 +1,17 @@
+#include "lmice_eal_common.h"
 #include "lmice_eal_shm.h"
 #include "lmice_trace.h"
 
-#include <sys/mman.h>
 #include <sys/stat.h>        /* For mode constants */
 #include <fcntl.h>           /* For O_* constants */
 #include <errno.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
 
-static inline __attribute__((always_inline))
+#if defined(__APPLE__) || defined(__linux__)
+
+static inline forceinline
 int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
 {
     int ret = 0;
@@ -59,7 +60,7 @@ int eal_shm_destroy(lmice_shm_t* shm)
         ret = close(shm->fd);
         if(ret == -1)
         {
-            lmice_debug_print("close error %d\n", errno);
+            lmice_debug_print("close error %d", errno);
         }
         shm->fd = 0;
     }
@@ -151,3 +152,42 @@ int eal_shm_open_readwrite(lmice_shm_t* shm)
 {
     return eal_shm_open(shm, O_RDWR);
 }
+
+#elif defined(_WIN32)
+
+int eal_shm_create(lmice_shm_t* shm)
+{
+
+}
+
+int eal_shm_destroy(lmice_shm_t* shm)
+{
+
+}
+
+int eal_shm_open(lmice_shm_t* shm, int mode)
+{
+
+}
+
+int eal_shm_close(lmice_shm_t* shm)
+{
+
+}
+
+void eal_shm_zero(lmice_shm_t* shm)
+{
+
+}
+
+int eal_shm_open_readonly(lmice_shm_t* shm)
+{
+
+}
+
+int eal_shm_open_readwrite(lmice_shm_t* shm)
+{
+
+}
+
+#endif

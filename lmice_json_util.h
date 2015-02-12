@@ -1,7 +1,7 @@
 #ifndef LMICE_JSON_UTIL_H
 #define LMICE_JSON_UTIL_H
 
-#include <jansson.h>
+//#include <jansson.h>
 
 #ifdef __cplusplus
 extern "C" {

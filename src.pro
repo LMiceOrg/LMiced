@@ -4,8 +4,7 @@ CONFIG -= console
 CONFIG -= app_bundle
 CONFIG -= qt
 
-SOURCES += main.c \
-    lmice_core.c    \
+SOURCES += lmice_core.c    \
     eal/lmice_ring.c \
     eal/lmice_trace.c \
     eal/lmice_eal_endian.c \
@@ -37,7 +36,10 @@ HEADERS += \
     eal/lmice_eal_thread.h \
     eal/lmice_eal_thread_win.h \
     eal/lmice_eal_thread_pthread.h \
-    eal/lmice_eal_common.h
+    eal/lmice_eal_common.h \
+    eal/lmice_eal_time.h \
+    eal/lmice_eal_time_win.h \
+    eal/lmice_eal_shm_win.h
 
 #Common config
 INCLUDEPATH += eal

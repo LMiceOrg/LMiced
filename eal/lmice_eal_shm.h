@@ -3,8 +3,10 @@
 
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
+#if defined(__APPLE__) || defined(__LINUX__)
+#include <sys/mman.h>
+#elif defined(_WIN32)
+#include "lmice_eal_shm_win.h"
 #endif
 
 struct lmice_shm_s
@@ -31,8 +33,5 @@ int eal_shm_open_readonly(lmice_shm_t* shm);
 int eal_shm_open_readwrite(lmice_shm_t* shm);
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif /** LMICE_EAL_SHM_H */

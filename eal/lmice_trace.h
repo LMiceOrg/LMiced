@@ -66,9 +66,15 @@ extern lmice_trace_name_t lmice_trace_name[];
         else ret = 0;   \
     }   \
     if(ret == 0)    \
-        printf("%s%s%s%s:[%d:%s]" format "\n", current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), thread_name, ##__VA_ARGS__); \
+        printf("%s%s%s%s:[%d:%s]" \
+            format \
+            "\n", \
+            current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), thread_name, ##__VA_ARGS__); \
     else    \
-        printf("%s%s%s%s:[%d:0x%tx]" format "\n", current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), pthread_self(), ##__VA_ARGS__); \
+        printf("%s%s%s%s:[%d:0x%tx]" \
+            format \
+            "\n", \
+            current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), pthread_self(), ##__VA_ARGS__); \
     }while (0);
 
 #define LMICE_TRACE_PER_THREAD(env, type, format, ...) do{ \
