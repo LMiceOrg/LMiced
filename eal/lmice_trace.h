@@ -1,8 +1,9 @@
 #ifndef TRACE_H
 #define TRACE_H
 
+#include "lmice_eal_common.h"
 #include "lmice_eal_thread.h"
-
+#include "lmice_eal_time.h"
 #include <time.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -23,19 +24,80 @@ enum lmice_trace_type_e
 
 typedef enum lmice_trace_type_e lmice_trace_type_t;
 
+#ifdef _WIN32
+struct lmice_trace_name_s {
+    lmice_trace_type_t type;
+    char name[16];
+    int color;
+};
+#define LMICE_TRACE_COLOR_TAG3(type) \
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), lmice_trace_name[type].color); \
+    printf(lmice_trace_name[type].name); \
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), lmice_trace_name[lmice_trace_none].color);
+
+#else
 struct lmice_trace_name_s {
     lmice_trace_type_t type;
     char name[16];
     char color[16];
 };
 
+#define LMICE_TRACE_COLOR_TAG3(type) lmice_trace_name[type].color, lmice_trace_name[type].name, lmice_trace_name[lmice_trace_none].color
+
+#endif
 typedef struct lmice_trace_name_s lmice_trace_name_t;
 
 extern const int lmice_trace_debug_mode;
 extern lmice_trace_name_t lmice_trace_name[];
 
-#define LMICE_TRACE_COLOR_TAG3(type) lmice_trace_name[type].color, lmice_trace_name[type].name, lmice_trace_name[lmice_trace_none].color
+#if defined(_WIN32)
 
+#define LMICE_TRACE_COLOR_PRINT(type, format, ...) do{ \
+    char current_time[26];  \
+    time_t tm;  \
+    if(lmice_trace_debug_mode == 0 && type == lmice_trace_debug)  \
+        break; \
+    time(&tm);  \
+    ctime_r(&tm, current_time); \
+    /*change newline to space */    \
+    current_time[24] = ' '; \
+    printf(current_time); \
+    LMICE_TRACE_COLOR_TAG3(type) \
+    printf(":" format "\n", ##__VA_ARGS__); \
+    }while (0);
+
+#define LMICE_TRACE_COLOR_PRINT_PER_THREAD(type, format, ...) do{ \
+    int ret;    \
+    time_t tm;  \
+    char current_time[26];  \
+    char thread_name[32]; \
+    if(lmice_trace_debug_mode == 0 && type == lmice_trace_debug)  \
+        break; \
+    time(&tm);  \
+    ctime_r(&tm, current_time); \
+    /*change newline to space */    \
+    current_time[24] = ' '; \
+    ret = pthread_getname_np(pthread_self(), thread_name, 32);  \
+    if(ret == 0) {   \
+        ret = strlen(thread_name);  \
+        if(ret == 0) ret = -1;  \
+        else ret = 0;   \
+    }   \
+    printf(current_time); \
+    LMICE_TRACE_COLOR_TAG3(type) \
+    if(ret == 0)    \
+        printf(":[%d:%s]" \
+            format \
+            "\n", \
+            getpid(), thread_name, ##__VA_ARGS__); \
+    else    \
+        printf(":[%d:0x%x]" \
+            format \
+            "\n", \
+            getpid(), pthread_self(), ##__VA_ARGS__); \
+    }while (0);
+
+#else /** Posix */
 #define LMICE_TRACE_COLOR_PRINT(type, format, ...) do{ \
     char current_time[26];  \
     time_t tm;  \
@@ -71,12 +133,13 @@ extern lmice_trace_name_t lmice_trace_name[];
             "\n", \
             current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), thread_name, ##__VA_ARGS__); \
     else    \
-        printf("%s%s%s%s:[%d:0x%tx]" \
+        printf("%s%s%s%s:[%d:0x%x]" \
             format \
             "\n", \
             current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), pthread_self(), ##__VA_ARGS__); \
     }while (0);
 
+#endif
 #define LMICE_TRACE_PER_THREAD(env, type, format, ...) do{ \
     char current_time[26];  \
     time_t tm;  \
@@ -88,11 +151,11 @@ extern lmice_trace_name_t lmice_trace_name[];
     current_time[24] = ' '; \
     if(lmice_trace_debug_mode == 1) \
         fprintf((env)->logfd, \
-        "%s**%s:thread[0x%tx] -- %s[%d]"  format "\n", \
+        "%s**%s:thread[0x%x] -- %s[%d]"  format "\n", \
         current_time, lmice_trace_name[type].name, pthread_self(), __FILE__,__LINE__, ##__VA_ARGS__); \
     else    \
         fprintf((env)->logfd, \
-        "%s**%s:thread[0x%tx]"  format "\n", \
+        "%s**%s:thread[0x%x]"  format "\n", \
         current_time, lmice_trace_name[type].name, pthread_self(), ##__VA_ARGS__); \
     }while(0);
 

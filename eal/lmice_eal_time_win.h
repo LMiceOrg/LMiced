@@ -2,8 +2,9 @@
 #define LMICE_EAL_TIME_WIN_H
 
 #include "lmice_eal_common.h"
+#include <time.h>
 
-void usleep(int usec){
+void forceinline usleep(int usec){
     LARGE_INTEGER litmp;
     LONGLONG QPart1, QPart2;
     double dfMinus, dfFreq, dfTim;
@@ -21,6 +22,11 @@ void usleep(int usec){
         dfTim = dfMinus / dfFreq;
 
     }while(dfTim<0.000001*usec);
+}
+
+int forceinline ctime_r(const time_t* tm, char* time)
+{
+    return ctime_s(time, 26, tm);
 }
 
 #endif /** LMICE_EAL_TIME_WIN_H */

@@ -10,7 +10,8 @@ SOURCES += main.cpp \
     system/system_environment.cpp \
     system/system_signal.cpp \
     system/system_worker.cpp \
-    system/system_master.cpp
+    system/system_master.cpp \
+    resource/resouce_manage.cpp
 
 OTHER_FILES += \
     README.txt
@@ -30,19 +31,29 @@ state/state_guard.h		state/state_transition.h \
 state/state_machine.h		state/state_type.h \
     system/system_master.h \
     eal/lmice_eal_thread_pthread.h \
-    eal/lmice_eal_common.h
+    eal/lmice_eal_common.h \
+    resource/resource_manage.h
+
+INCLUDEPATH += eal
+win32-msvc* {
+message("LMiced - Windows MSVC")
+QMAKE_CFLAGS += -std=c89
+DEFINES += inline=__inline
+QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
+
+}
+
+macx-clang*{
+message("LMiced - MacX Darwin")
 
 QMAKE_CFLAGS += -std=c89 -funit-at-a-time -Wno-unused-function
-QMAKE_CFLAGS += -Dinline=__inline
+#QMAKE_CFLAGS += -Dinline=__inline
 
 QMAKE_CXXFLAGS += -std=c++0x -Wshadow
 
-INCLUDEPATH += ../src
+
 QMAKE_LFLAGS_DEBUG      += -L../debug_build -lsrc
 QMAKE_LFLAGS_RELEASE    += -L../release_build -lsrc
-
-macx-clang*{
-message("MacX Darwin")
 
 INCLUDEPATH += ../lib/boost_1_55_0 \
 

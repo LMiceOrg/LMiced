@@ -1,6 +1,7 @@
 #include "resource_shm_internal.h"
 #include "resourec_shm.h"
 
+#include "lmice_eal_common.h"
 #include "lmice_eal_align.h"
 #include "lmice_eal_atomic.h"
 #include "lmice_eal_hash.h"
@@ -10,14 +11,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 #define SHM_ARRAY_SIZE          1024
 #define HASH_CHALLENGE_BEGIN    "SharedMemory//Resource//LMice"
 #define HASH_CHALLENGE_END      "hehao@tsinghua.org.cn"
 #define LOCK_LOOP_COUNT         20000000LL
 
-static inline __attribute__((always_inline))
+static forceinline
 uint64_t lock_shm_array(lmice_shm_array_t* shm_array)
 {
     lmice_shm_array_head_t *head = (lmice_shm_array_head_t *)shm_array;
@@ -25,14 +26,14 @@ uint64_t lock_shm_array(lmice_shm_array_t* shm_array)
 
 }
 
-static inline __attribute__((always_inline))
+static forceinline
 uint64_t unlock_shm_array(lmice_shm_array_t* shm_array)
 {
     lmice_shm_array_head_t *head = (lmice_shm_array_head_t *)shm_array;
     return eal_spin_unlock(&head->lock);
 }
 
-static inline __attribute__((always_inline))
+static forceinline
 uint64_t shm_hash(lmice_shm_t* shm)
 {
     uint64_t hval = eal_hash64_fnv1a( HASH_CHALLENGE_BEGIN, sizeof(HASH_CHALLENGE_BEGIN) -1 );
@@ -41,8 +42,8 @@ uint64_t shm_hash(lmice_shm_t* shm)
     return hval;
 }
 
-static inline __attribute__((always_inline))
-void hash_to_name(uint64_t hval, char* name)
+static forceinline
+void hash_to_nameA(uint64_t hval, char* name)
 {
     const char* hex_list="0123456789ABCDEF";
     for(int i=0; i<8; ++i)
@@ -51,6 +52,27 @@ void hash_to_name(uint64_t hval, char* name)
         name[i*2+1] = hex_list[ *( (uint8_t*)&hval+i) & 0xf ];
     }
 }
+
+static forceinline
+void hash_to_nameW(uint64_t hval, wchar_t* name)
+{
+    char cname[32]={0};
+    hash_to_nameA(hval, cname);
+    MultiByteToWideChar(
+                CP_ACP,
+                MB_PRECOMPOSED,
+                cname,
+                16,
+                name,
+                32);
+}
+
+#if defined(UNICODE) || defined(_UNICODE)
+#define hash_to_name(a,b) hash_to_nameW(a,b)
+#else
+#define hash_to_name(a,b) hash_to_nameA(a,b)
+#endif
+
 
 int lmice_create_shm_array(lmice_shm_array_t** shm_array)
 {
@@ -127,7 +149,7 @@ int lmice_append_shm(lmice_shm_array_t *shm_array, lmice_shm_t *shm)
             sa->hash = hval;
             sa->address = lshm.addr;
             sa->size = lshm.size;
-            sa->fd = lshm.fd;
+            sa->fd = (int64_t)lshm.fd;
             break;
         }
         else if(head->next_array == 0 ) /** the next array is not available */
@@ -207,7 +229,7 @@ int lmice_remove_shm_by_hval(lmice_shm_array_t *shm_array, uint64_t hval)
             {
                 /* shm destory */
                 lshm.addr = sa->address;
-                lshm.fd = sa->fd;
+                lshm.fd = (HANDLE)sa->fd;
                 lshm.size = sa->size;
                 ret = eal_shm_destroy(&lshm);
 

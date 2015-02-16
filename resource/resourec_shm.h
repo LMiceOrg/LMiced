@@ -22,6 +22,8 @@ int lmice_terminate_shm_array(lmice_shm_array_t* shm_array);
 int lmice_append_shm(lmice_shm_array_t* shm_array, lmice_shm_t* shm);
 int lmice_remove_shm(lmice_shm_array_t* shm_array, lmice_shm_t* shm);
 
+/* Resource Count */
+int lmice_resource_count(int scenario);
 #ifdef __cplusplus
 }
 #endif

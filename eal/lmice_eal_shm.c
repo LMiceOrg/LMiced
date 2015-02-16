@@ -88,7 +88,7 @@ int eal_shm_open(lmice_shm_t* shm, int mode)
             if( (mode & O_RDWR) == O_RDWR)
                 prot = PROT_READ|PROT_WRITE;
 
-            shm->size = st.st_size;            
+            shm->size = st.st_size;
             shm->addr = (uint64_t)mmap(NULL, shm->size, prot, MAP_SHARED, shm->fd, 0);
             if((void*)shm->addr == MAP_FAILED)
             {
@@ -155,39 +155,136 @@ int eal_shm_open_readwrite(lmice_shm_t* shm)
 
 #elif defined(_WIN32)
 
+static forceinline
+int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
+{
+
+    DWORD err=0;
+    DWORD access = FILE_MAP_READ;
+
+    if(mode & O_RDWR)
+        access |= FILE_MAP_WRITE;
+
+    shm->fd = OpenFileMapping(
+                access,
+                FALSE,
+                shm->name
+                );
+    if(shm->fd == NULL)
+    {
+        err = GetLastError();
+        lmice_debug_print("eal_shm_create call OpenFileMapping(%s) return fd(%ld) and size(%d) errno(%d)", shm->name, shm->fd, shm->size, err);
+
+        return err;
+    }
+
+    shm->addr = (uint64_t) MapViewOfFile(
+                shm->fd, // handle to map object
+                access,  // read/write permission
+                0,
+                0,
+                shm->size);
+
+    if (shm->addr == 0)
+    {
+        err = GetLastError();
+        lmice_error_print("Could not map view of file (%d).\n", err);
+
+        eal_shm_close(shm);
+
+        return err;
+    }
+
+    return 0;
+}
+
 int eal_shm_create(lmice_shm_t* shm)
 {
+    HANDLE hMapFile;
+    LPVOID pBuf;
+
+    hMapFile = CreateFileMapping (
+                INVALID_HANDLE_VALUE,    // use paging file
+                NULL,                    // default security
+                PAGE_READWRITE,          // read/write access
+                0,                       // maximum object size (high-order DWORD)
+                shm->size,               // maximum object size (low-order DWORD)
+                shm->name);              // name of mapping object
+
+    if (hMapFile == NULL)
+    {
+        lmice_error_print("Could not create file mapping object (%d).\n", GetLastError());
+        return 1;
+    }
+
+    pBuf = MapViewOfFile(
+                hMapFile,               // handle to map object
+                FILE_MAP_ALL_ACCESS,    // read/write permission
+                0,
+                0,
+                shm->size);
+
+    if (pBuf == NULL)
+    {
+        lmice_error_print("Could not map view of file (%lu).\n",GetLastError());
+        CloseHandle(hMapFile);
+        return 1;
+    }
+
+    shm->fd = hMapFile;
+    shm->addr = (uint64_t)pBuf;
+
+    return 0;
 
 }
 
 int eal_shm_destroy(lmice_shm_t* shm)
 {
-
+    if(shm->addr)
+        UnmapViewOfFile((LPVOID)shm->addr);
+    if(shm->fd)
+        CloseHandle(shm->fd);
+    shm->addr = 0;
+    shm->fd = NULL;
+    return 0;
 }
 
 int eal_shm_open(lmice_shm_t* shm, int mode)
 {
+    int ret = 0;
+
+    /** if shared memory address is already existing, then just return zero */
+    if(shm->addr != 0 || shm->fd != 0)
+        return 0;
+
+    return eal_shm_open_with_mode(shm, mode);
 
 }
 
 int eal_shm_close(lmice_shm_t* shm)
 {
-
+    if(shm->addr)
+        UnmapViewOfFile((LPVOID)shm->addr);
+    if(shm->fd)
+        CloseHandle(shm->fd);
+    shm->addr = 0;
+    shm->fd = NULL;
+    return 0;
 }
 
 void eal_shm_zero(lmice_shm_t* shm)
 {
-
+    memset(shm, 0, sizeof(lmice_shm_t));
 }
 
 int eal_shm_open_readonly(lmice_shm_t* shm)
 {
-
+    return eal_shm_open(shm, O_RDONLY);
 }
 
 int eal_shm_open_readwrite(lmice_shm_t* shm)
 {
-
+    return eal_shm_open(shm, O_RDWR);
 }
 
 #endif

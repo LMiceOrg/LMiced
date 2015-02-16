@@ -5,10 +5,6 @@
 
 #if defined(__APPLE__) || defined(__LINUX__)
 #include <sys/mman.h>
-#elif defined(_WIN32)
-#include "lmice_eal_shm_win.h"
-#endif
-
 struct lmice_shm_s
 {
     int fd;
@@ -16,6 +12,11 @@ struct lmice_shm_s
     uint64_t addr;
     char name[32];
 };
+#elif defined(_WIN32)
+#include "lmice_eal_shm_win.h"
+#endif
+
+
 
 typedef struct lmice_shm_s lmice_shm_t;
 

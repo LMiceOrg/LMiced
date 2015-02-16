@@ -11,15 +11,17 @@
 #include "lmice_eal_daemon.h"
 
 /** System */
-#include <arpa/inet.h>
-#include <pthread.h>
+//#include <arpa/inet.h>
+//#include <pthread.h>
+//#include <unistd.h>
+//#include <sys/time.h>
 #include <time.h>
 
 /** C standard */
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+
 
 /** C++ standard */
 #include <iostream>
@@ -41,7 +43,6 @@ linux, compile with: gcc -o testo test.c -lrt
 */
 
 #include <time.h>
-#include <sys/time.h>
 #include <stdio.h>
 #include <stdint.h>
 
@@ -51,6 +52,7 @@ linux, compile with: gcc -o testo test.c -lrt
 #include <mach/mach_time.h> /* mach_absolute_time */
 #endif
 
+/*
 void* wait_time(void* tvar)
 {
     int* pi = (int*)tvar;
@@ -120,6 +122,8 @@ void* wait_time(void* tvar)
     lmice_warning_print("total time:%ld\n",(future[9].tv_nsec - future[0].tv_nsec) );
     return nullptr;
 }
+
+*/
 
 int main(int argc, char* argv[])
 {
