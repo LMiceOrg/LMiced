@@ -9,12 +9,12 @@ extern "C" {
 
 #define lmice_resource_internal_d
 
-#ifdef _WIN32
 struct lmice_shm_array_head_s
 {
      uint64_t lock;         /** shm array's lock */
-     int64_t count;         /** current usages of array */
-     int64_t size;          /** total size of array */
+     int32_t size;          /** current usages of array */
+     int32_t count;         /** total size of array */
+     int64_t scenario;      /** scenario identity */
      uint64_t next_array;   /** next array address */
      char reserved[32];     /** padding */
 };
@@ -29,26 +29,6 @@ struct lmice_shm_array_s
     char name[32];          /** shm name */
 };
 
-#else
-struct lmice_shm_array_head_s
-{
-     uint64_t lock;         /** shm array's lock */
-     int32_t count;         /** current usages of array */
-     int32_t size;          /** total size of array */
-     uint64_t next_array;   /** next array address */
-     char reserved[32];          /** shm name */
-};
-
-struct lmice_shm_array_s
-{
-    uint64_t hash;          /** shm name's hash */
-    int32_t size;           /** shm size */
-    int32_t count;          /** shm count */
-    int32_t fd;             /** file descriptor */
-    uint64_t address;       /** shm address */
-    char name[32];          /** shm name */
-};
-#endif
 
 struct lmice_shm_object_s
 {
