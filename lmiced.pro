@@ -11,7 +11,9 @@ SOURCES += main.cpp \
     system/system_signal.cpp \
     system/system_worker.cpp \
     system/system_master.cpp \
-    resource/resouce_manage.cpp
+    resource/resouce_manage.cpp \
+    timer/timer_system_time.cpp \
+    timer/timer_oneshot.cpp
 
 OTHER_FILES += \
     README.txt
@@ -32,7 +34,8 @@ state/state_machine.h		state/state_type.h \
     system/system_master.h \
     eal/lmice_eal_thread_pthread.h \
     eal/lmice_eal_common.h \
-    resource/resource_manage.h
+    resource/resource_manage.h \
+    timer/timer_system_time.h
 
 INCLUDEPATH += eal
 win32-msvc* {
@@ -41,6 +44,8 @@ QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 
+INCLUDEPATH += ../lib/jansson-2.7/build/include ../lib/sglib-1.0.4
+LIBS += -L../lib/jansson-2.7/build/lib/Release -ljansson
 }
 
 macx-clang*{
