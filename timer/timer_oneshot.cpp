@@ -3,15 +3,21 @@
 #include <eal/lmice_eal_spinlock.h>
 typedef void (timer_callback) (void* pdata);
 
+/**
+ * @brief The lm_timer_s struct 定时器
+ */
 struct lm_timer_s
 {
-    int state;
-    int count;
-    timer_callback tc;
-    void* pdata;
-    int64_t begin_time;
-    int64_t tick;
-    int64_t instid;
+    int32_t state;          // 状态
+    int32_t size;           // 触发计数量
+    timer_callback tc;      // 触发回调函数
+    void* pdata;            // 回调函数参数
+
+    int64_t count;          // 已完成触发数量
+    int64_t begin_time;     // 开始时间
+    int64_t tick;           // 周期
+    int64_t instid;         // 场景编号
+    int64_t timerid;        // 定时器编号
 };
 
 enum os_timer_e
