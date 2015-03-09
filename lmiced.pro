@@ -37,7 +37,7 @@ state/state_machine.h		state/state_type.h \
     resource/resource_manage.h \
     timer/timer_system_time.h
 
-INCLUDEPATH += eal
+INCLUDEPATH += eal .
 win32-msvc* {
 message("LMiced - Windows MSVC")
 QMAKE_CFLAGS += -std=c89

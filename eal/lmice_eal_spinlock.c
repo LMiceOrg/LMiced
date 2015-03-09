@@ -37,6 +37,6 @@ int eal_spin_lock(uint64_t* lock)
 
 int eal_spin_unlock(uint64_t* lock)
 {
-    *lock = 0;
+    eal_fetch_and_sub64(lock, 1);
     return 0;
 }
