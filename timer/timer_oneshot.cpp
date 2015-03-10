@@ -5,9 +5,6 @@
 #include <errno.h>
 #include <eal/lmice_eal_spinlock.h>
 
-
-typedef void (timer_callback) (void* pdata);
-
 /**
  * @brief The lm_timer_s struct 定时器
  */
@@ -35,7 +32,8 @@ enum lm_timer_e
 };
 
 //Declaration
-struct lm_timer_s lm_timer[128];
+#define MAX_TICK_TIMER_SIZE 128
+struct lm_timer_s lm_timer[MAX_TICK_TIMER_SIZE];
 uint64_t lock_lm_timer = 0;
 
 void process_tick_timer()
