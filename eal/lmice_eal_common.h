@@ -8,6 +8,11 @@
 
 #define     forceinline __attribute__((always_inline))
 
+#if defined(__MINGW32__)
+#define WIN32_MEAN_AND_LEAN
+#include <Windows.h>
+#endif
+
 #elif defined(_MSC_VER) /** MSC */
 
 #define     forceinline __inline
