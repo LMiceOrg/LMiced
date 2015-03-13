@@ -13,7 +13,8 @@ SOURCES += main.cpp \
     system/system_master.cpp \
     resource/resouce_manage.cpp \
     timer/timer_system_time.cpp \
-    timer/timer_oneshot.cpp
+    timer/timer_oneshot.cpp \
+    resource/resource.cpp
 
 OTHER_FILES += \
     README.txt
