@@ -3,7 +3,9 @@
 
 #include "lmice_eal_common.h"
 
-DWORD forceinline pthread_self()
+typedef DWORD pid_t;
+
+pid_t forceinline pthread_self()
 {
     return GetCurrentThreadId();
 }
@@ -19,7 +21,7 @@ int forceinline pthread_setname_np(const char* name)
     return 0;
 }
 
-DWORD forceinline getpid()
+pid_t forceinline getpid()
 {
     return GetCurrentProcessId();
 }

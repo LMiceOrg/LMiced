@@ -3,8 +3,6 @@
 
 #include "config.h"
 
-
-#include <unistd.h>
 #include <stdio.h>
 
 #define CONTROL_SHMNAME "CC597303-0F85-40B2-8BDC-4724BD" /** C87B4E */

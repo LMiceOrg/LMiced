@@ -12,6 +12,8 @@ struct lmice_shm_s
     uint64_t addr;
     char name[32];
 };
+
+#define INVALID_HANDLE_VALUE -1
 #elif defined(_WIN32)
 #include "lmice_eal_shm_win.h"
 #endif
@@ -33,6 +35,7 @@ void eal_shm_zero(lmice_shm_t* shm);
 int eal_shm_open_readonly(lmice_shm_t* shm);
 int eal_shm_open_readwrite(lmice_shm_t* shm);
 
+int eal_shm_hash_name(uint64_t hval, char* name);
 
 
 #endif /** LMICE_EAL_SHM_H */

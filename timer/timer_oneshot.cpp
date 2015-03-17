@@ -23,6 +23,8 @@ struct lm_tick_timer_s
 
 };
 
+typedef struct lm_tick_timer_s lm_tick_timer_t;
+
 enum lm_tick_timer_e
 {
     TICK_TIMER_EMPTY = 1,
@@ -33,7 +35,7 @@ enum lm_tick_timer_e
 
 //Declaration
 #define MAX_TICK_TIMER_SIZE 128
-struct lm_tick_timer_s lm_tick_timer[MAX_TICK_TIMER_SIZE];
+lm_tick_timer_t lm_tick_timer[MAX_TICK_TIMER_SIZE];
 uint64_t lm_tick_timer_lock = 0;
 
 void static forceinline generate_event_name(uint64_t hval, char* ename, size_t esize)
@@ -65,7 +67,7 @@ void process_tick_timer()
     if(ret != 0)
         return;
 
-    for(id = 0; id < sizeof(lm_tick_timer)/sizeof(struct lm_tick_timer_s); ++id )
+    for(id = 0; id < sizeof(lm_tick_timer)/sizeof(lm_tick_timer_t); ++id )
     {
         struct lm_tick_timer_s *pt;
         pt = &lm_tick_timer[id];
@@ -118,7 +120,7 @@ int create_tick_timer(int64_t instid, int tick, int size,  int64_t begin_tick, H
         return EBUSY;
 
     ret = EADDRINUSE;
-    for(id=0; id< sizeof(lm_tick_timer)/sizeof(struct lm_tick_timer_s); ++id )
+    for(id=0; id< sizeof(lm_tick_timer)/sizeof(lm_tick_timer_t); ++id )
     {
         struct lm_tick_timer_s *pt;
         pt = &lm_tick_timer[id];
@@ -173,7 +175,7 @@ int delete_tick_timer(uint32_t tc_id)
     int ret;
     struct lm_tick_timer_s *pt;
 
-    if(tc_id >= sizeof(lm_tick_timer)/sizeof(struct lm_tick_timer_s))
+    if(tc_id >= sizeof(lm_tick_timer)/sizeof(lm_tick_timer_t))
         return ERANGE;
 
     ret = eal_spin_trylock(&lm_tick_timer_lock);

@@ -39,7 +39,8 @@ HEADERS += \
     eal/lmice_eal_common.h \
     eal/lmice_eal_time.h \
     eal/lmice_eal_time_win.h \
-    eal/lmice_eal_shm_win.h
+    eal/lmice_eal_shm_win.h \
+    eal/lmice_eal_event.h
 
 #Common config
 INCLUDEPATH += eal

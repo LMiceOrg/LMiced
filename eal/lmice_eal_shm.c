@@ -1,5 +1,6 @@
 #include "lmice_eal_common.h"
 #include "lmice_eal_shm.h"
+#include "lmice_eal_hash.h"
 #include "lmice_trace.h"
 
 #include <sys/stat.h>        /* For mode constants */
@@ -165,7 +166,7 @@ int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
     if(mode & O_RDWR)
         access |= FILE_MAP_WRITE;
 
-    shm->fd = OpenFileMapping(
+    shm->fd = OpenFileMappingA(
                 access,
                 FALSE,
                 shm->name
@@ -173,7 +174,7 @@ int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
     if(shm->fd == NULL)
     {
         err = GetLastError();
-        lmice_debug_print("eal_shm_create call OpenFileMapping(%s) return fd(%ld) and size(%d) errno(%d)", shm->name, shm->fd, shm->size, err);
+        lmice_debug_print("eal_shm_create call OpenFileMapping(%s) return fd(%ld) and size(%d) errno(%ld)", shm->name, shm->fd, shm->size, err);
 
         return err;
     }
@@ -203,7 +204,9 @@ int eal_shm_create(lmice_shm_t* shm)
     HANDLE hMapFile;
     LPVOID pBuf;
 
-    hMapFile = CreateFileMapping (
+    shm->fd = (HANDLE)0;
+
+    hMapFile = CreateFileMappingA (
                 INVALID_HANDLE_VALUE,    // use paging file
                 NULL,                    // default security
                 PAGE_READWRITE,          // read/write access
@@ -241,11 +244,16 @@ int eal_shm_create(lmice_shm_t* shm)
 int eal_shm_destroy(lmice_shm_t* shm)
 {
     if(shm->addr)
+    {
         UnmapViewOfFile((LPVOID)shm->addr);
+        shm->addr = 0;
+    }
+
     if(shm->fd)
+    {
         CloseHandle(shm->fd);
-    shm->addr = 0;
-    shm->fd = NULL;
+        shm->fd = NULL;
+    }
     return 0;
 }
 
@@ -263,13 +271,7 @@ int eal_shm_open(lmice_shm_t* shm, int mode)
 
 int eal_shm_close(lmice_shm_t* shm)
 {
-    if(shm->addr)
-        UnmapViewOfFile((LPVOID)shm->addr);
-    if(shm->fd)
-        CloseHandle(shm->fd);
-    shm->addr = 0;
-    shm->fd = NULL;
-    return 0;
+    return eal_shm_destroy(shm);
 }
 
 void eal_shm_zero(lmice_shm_t* shm)
@@ -288,3 +290,29 @@ int eal_shm_open_readwrite(lmice_shm_t* shm)
 }
 
 #endif
+
+static forceinline
+void hash_to_nameA(uint64_t hval, char* name)
+{
+    const char* hex_list="0123456789ABCDEF";
+    for(int i=0; i<8; ++i)
+    {
+        name[i*2] = hex_list[ *( (uint8_t*)&hval+i) >> 4];
+        name[i*2+1] = hex_list[ *( (uint8_t*)&hval+i) & 0xf ];
+    }
+}
+
+int eal_shm_hash_name(uint64_t hval, char *name)
+{
+#if defined(_WIN32)
+    memcpy(name, "Global\\", 7);
+    hash_to_nameA(hval, name+7);
+    name[23]='\0';
+#else
+    hash_to_nameA(hval, name);
+    name[16]='\0';
+#endif
+
+
+    return 0;
+}
