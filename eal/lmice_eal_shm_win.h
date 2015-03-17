@@ -3,13 +3,23 @@
 
 #include "lmice_eal_common.h"
 
+#ifdef _W64
 struct lmice_shm_s
 {
     HANDLE fd;
-    int size;
+    int64_t size;
     uint64_t addr;
     char name[32];
 };
+#else
+struct lmice_shm_s
+{
+    HANDLE fd;
+    int32_t size;
+    uint64_t addr;
+    char name[32];
+};
+#endif
 
 #endif /** LMICE_EAL_SHM_WIN_H */
 
