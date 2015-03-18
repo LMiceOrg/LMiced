@@ -1,4 +1,4 @@
-extern "C"
+﻿extern "C"
 {
 #include "eal/lmice_eal_common.h"
 #include "eal/lmice_eal_hash.h"
@@ -33,6 +33,7 @@ public:
     virtual int operator() (void* pdata) = 0;
 };
 
+#define MAX_CLIENT_COUNT 200
 #define ALL_INSTANCE (const char*)0
 enum lmice_common
 {
@@ -77,7 +78,7 @@ struct lmice_server_info_s
     uint64_t lock;
     uint64_t eid;
     lmice_time_t tm;
-    lmice_instance_info_t inst;
+    lmice_instance_info_t inst[MAX_CLIENT_COUNT];
 
 };
 
@@ -130,8 +131,8 @@ typedef struct lmice_client_info_s lmice_client_info_t;
 
 class lmice_spi
 {
-  public:
-    lmice_spi();
+public:
+    int init();
     //场景管理
     int join_session(uint64_t session_id);
     int leave_session(uint64_t session_id);
@@ -151,7 +152,9 @@ class lmice_spi
     //资源回收
     int join();
 
-private:
+    void printclients();
+
+public:
     uint64_t    m_sid;
     uint64_t    m_iid;
     uint64_t    m_pid;
@@ -164,18 +167,26 @@ private:
 #define CLIENT_SHMNAME "CC597303-0F85-40B2-8BDC-4724BD" /** C87B4E */
 #define BOARD_SHMNAME "82E0EE49-382C-40E7-AEA2-495999" /** 392D29 */
 #define DEFAULT_SHM_SIZE 4096 /** 4KB */
-#define MAX_CLIENT_COUNT 200
+
 #define LMICE_VERSION 1
 
 
-lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*10, 0,   CLIENT_SHMNAME};
-lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE, 0,  BOARD_SHMNAME};
+lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*16, 0,   CLIENT_SHMNAME};
+lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE*2, 0,  BOARD_SHMNAME};
 
-lmice_spi::lmice_spi()
-    :m_sid(0)
+int lmice_spi::init()
 {
     int ret;
     uint64_t hval;
+
+    //避免重复初始化
+    if(m_pid != 0
+            && m_client != 0
+            && m_server != 0)
+        return 0;
+
+    //默认session_id = 0
+    m_sid = 0;
 
     //获取当前进程ID
     m_pid = getpid();
@@ -188,7 +199,7 @@ lmice_spi::lmice_spi()
     if(ret != 0)
     {
         lmice_critical_print("open board_shm failed\n");
-        return;
+        return 1;
     }
     m_server = (lmice_server_info_t*)((void*)(board_shm.addr));
 
@@ -201,14 +212,26 @@ lmice_spi::lmice_spi()
     {
         lmice_critical_print("create client_shm[%s] size(%d) failed\n", client_shm.name, client_shm.size);
         eal_shm_destroy(&board_shm);
-        return;
+        return 1;
     }
+    lmice_debug_print("client shm size %llu", client_shm.size);
+
+
+
     m_client = (lmice_client_info_t*)((void*)client_shm.addr);
+
+    lmice_event_t e;
+    eal_event_zero(&e);
+    eal_event_hash_name(hval, e.name);
+    lmice_debug_print("create client event[%s]", e.name);
+    eal_event_create(&e);
+    m_client->eid = (uint64_t)e.fd;
+    lmice_debug_print("create client event [%ull]", m_client->eid);
 
     //注册客户端信息到平台
     do {
         lmice_instance_info_t info={LMICE_VERSION,
-                                    DEFAULT_SHM_SIZE,
+                                    client_shm.size,
                                     m_pid,
                                     m_iid};
         //        info.version = LMICE_VERSION;
@@ -220,7 +243,7 @@ lmice_spi::lmice_spi()
 
         lmice_instance_info_t *p;
         int i;
-        for(p= &m_server->inst,i=0; i<MAX_CLIENT_COUNT;++p, ++i)
+        for(p= m_server->inst,i=0; i<MAX_CLIENT_COUNT;++p, ++i)
         {
             if(p->process_id == 0)
             {
@@ -235,6 +258,7 @@ lmice_spi::lmice_spi()
 
     } while(0);
 
+    return 0;
 }
 
 //加入场景
@@ -328,7 +352,8 @@ int lmice_spi::register_subscribe(const char* type, const char* inst, uint64_t *
     uint64_t hval;
     hval = eal_hash64_fnv1a(&m_sid, sizeof(m_sid));
     hval = eal_hash64_more_fnv1a(type, sizeof(type)-1, hval);
-    hval = eal_hash64_more_fnv1a(inst, sizeof(inst)-1, hval);
+    if(inst != 0)
+        hval = eal_hash64_more_fnv1a(inst, sizeof(inst)-1, hval);
 
     //创建资源
     lmice_resource_t* res;
@@ -561,9 +586,95 @@ int lmice_spi::set_qos_level(int level)
     return 0;
 }
 
+#include <vector>
 int lmice_spi::join()
 {
+    std::vector<HANDLE> evts;
+    int i;
+    lmice_timer_t* timer;
+    lmice_custom_event_t *ev;
+    lmice_resource_t *res;
+
+
+    if(m_client->eid != 0)
+    {
+        evts.push_back((HANDLE)m_client->eid);
+    }
+
+    for(res = m_client->res, i=0; i<128; ++res, ++i )
+    {
+        if(res->state == WORK_RESOURCE)
+        {
+            evts.push_back((HANDLE)res->evt.fd);
+        }
+    }
+
+
+
+    for(timer = m_client->timer, i=0; i<128; ++timer, ++i )
+    {
+        if(timer->state == WORK_RESOURCE)
+        {
+            evts.push_back((HANDLE)timer->evt.fd);
+        }
+    }
+
+    for(ev = m_client->ce, i=0; i<128; ++ev, ++i )
+    {
+        if(ev->state == WORK_RESOURCE)
+        {
+            evts.push_back((HANDLE)ev->evt.fd);
+        }
+    }
+
+    lmice_debug_print("total events=%d, %llu", evts.size(), m_client->eid);
+    const HANDLE* ph = &evts[0];
+    for(;;)
+    {
+        DWORD hr = WaitForMultipleObjects( evts.size(),
+                                           ph,
+                                           FALSE,
+                                           INFINITE);
+        switch(hr)
+        {
+        case WAIT_OBJECT_0:
+            return 0;
+            break;
+        case WAIT_TIMEOUT:
+            return 1;
+            break;
+        case WAIT_FAILED:
+        {
+            DWORD err =GetLastError();
+            lmice_debug_print("event wait failed (%llu)\n", err);
+            return 1;
+            break;
+        }
+        default:
+            lmice_debug_print("event fired (%llu)\n", hr - WAIT_OBJECT_0);
+            return 0;
+            break;
+        }
+    }
+
+
     return 0;
+}
+
+void lmice_spi::printclients()
+{
+    lmice_instance_info_t *inst;
+    int i;
+    int pos = 0;
+    for(inst = m_server->inst, i=0;i<MAX_CLIENT_COUNT; ++inst, ++i)
+    {
+        if(inst->process_id != 0)
+        {
+            ++pos;
+            lmice_debug_print("inst[ %d ] version %d, size %d, instid=%llX, processid =%lld", pos, inst->version,
+                              inst->size, inst->instance_id, inst->process_id);
+        }
+    }
 }
 
 
@@ -584,37 +695,51 @@ public:
     }
 };
 
-int main()
+//建立中间件实例
+Thread lmice_spi spi;
+
+int main(int argc, char* argv[])
 {
     int ret;
-    //建立中间件实例
-    lmice_spi spi;
 
+    spi.init();
+
+    if(argc > 1)
+    {
+        spi.printclients();
+        return 0;
+    }
     printf("%ld\n", sizeof(lmice_client_info_t));
-    return 1;
+    //return 1;
 
     ret = spi.join_session(1);
     if(ret != 0)
         return ret;
 
+    lmice_critical_print("begin publish");
     //注册资源发布与订阅
     uint64_t pe, se;
     spi.register_publish("beatheart", "172.26.4.153", 32, &pe);
+    lmice_critical_print("begin subscribe");
     spi.register_subscribe("beatheart", ALL_INSTANCE, &se);
-
+    lmice_critical_print("created publish subscribe");
     //注册仿真时间定时器
     uint64_t etick, ttick;
+    lmice_critical_print("begin ticker");
     spi.register_tick_event(30, INFINITY, TICK_NOW, &etick);
 
     //注册系统定时器
+    lmice_critical_print("begin timer");
     spi.register_timer_event(30, INFINITY, TIMER_NOW, &ttick);
 
     //注册事件状态机
     uint64_t evts[2], cevt;
     evts[0] = etick; evts[1] = ttick;
+    lmice_critical_print("begin state machine");
     spi.register_custom_event(evts, 2, &cevt);
 
     //可信计算与QoS设置
+    lmice_critical_print("begin trust compute");
     spi.set_qos_level(NO_QOS_SUPPORT);
     spi.set_tc_level(NO_TRUST_COMPUTION_SUPPORT);
 
@@ -622,6 +747,7 @@ int main()
     //...
 
     //清理中间件
+    lmice_critical_print("begin join");
     spi.join();
 
     return 0;

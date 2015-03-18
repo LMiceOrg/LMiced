@@ -5,6 +5,8 @@
     #include "lmice_eal_thread_pthread.h"
 #elif defined(_WIN32)
     #include "lmice_eal_thread_win.h"
+    #define Thread __declspec( thread )
+
 #else
     #error(Unsupported thread library)
 #endif
