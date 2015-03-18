@@ -68,6 +68,7 @@ extern lmice_trace_name_t lmice_trace_name[];
 
 #define LMICE_TRACE_COLOR_PRINT_PER_THREAD(type, format, ...) do{ \
     int ret;    \
+    size_t sz;  \
     time_t tm;  \
     char current_time[26];  \
     char thread_name[32]; \
@@ -79,8 +80,8 @@ extern lmice_trace_name_t lmice_trace_name[];
     current_time[24] = ' '; \
     ret = pthread_getname_np(pthread_self(), thread_name, 32);  \
     if(ret == 0) {   \
-        ret = strlen(thread_name);  \
-        if(ret == 0) ret = -1;  \
+        sz = strlen(thread_name);  \
+        if(sz == 0) ret = -1;  \
         else ret = 0;   \
     }   \
     printf(current_time); \

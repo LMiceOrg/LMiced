@@ -174,7 +174,7 @@ int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
     if(shm->fd == NULL)
     {
         err = GetLastError();
-        lmice_debug_print("eal_shm_create call OpenFileMapping(%s) return fd(%ld) and size(%d) errno(%ld)", shm->name, shm->fd, shm->size, err);
+        lmice_debug_print("eal_shm_create call OpenFileMapping(%s) return fd(%px) and size(%d) errno(%ld)", shm->name, shm->fd, shm->size, err);
 
         return err;
     }
@@ -305,12 +305,13 @@ void hash_to_nameA(uint64_t hval, char* name)
 int eal_shm_hash_name(uint64_t hval, char *name)
 {
 #if defined(_WIN32)
-    memcpy(name, "Global\\", 7);
-    hash_to_nameA(hval, name+7);
-    name[23]='\0';
+    memcpy(name, "Global\\sm", 9);
+    hash_to_nameA(hval, name+9);
+    name[25]='\0';
 #else
-    hash_to_nameA(hval, name);
-    name[16]='\0';
+    memcpy(name, "sm", 2);
+    hash_to_nameA(hval, name+2);
+    name[18]='\0';
 #endif
 
 
