@@ -32,10 +32,6 @@ int eal_event_hash_name(uint64_t hval, char *name)
 #if defined(_WIN32)
 
 
-
-#endif
-
-
 int eal_event_create(lmice_event_t* e)
 {
     e->fd = CreateEventA(
@@ -63,3 +59,12 @@ int eal_event_awake(uint64_t eid)
 {
     return SetEvent((HANDLE)eid);
 }
+#elif defined(__APPLE__) || defined(__LINUX__)
+
+int eal_event_create(lmice_event_t* e)
+{
+
+}
+
+#endif
+

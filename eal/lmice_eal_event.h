@@ -27,9 +27,9 @@ struct lmice_event_s
 };
 #endif
 
-typedef struct lmice_event_s lmice_event_t;
-
 #endif
+
+typedef struct lmice_event_s lmice_event_t;
 
 int eal_event_zero(lmice_event_t* e);
 
