@@ -64,10 +64,7 @@ int eal_event_awake(uint64_t eid)
 {
     return SetEvent((HANDLE)eid);
 }
-<<<<<<< HEAD
-=======
 
->>>>>>> cfcb6e7355e0dd5febef1e2bcb875d631c9ec2b7
 #elif defined(__APPLE__) || defined(__LINUX__)
 
 int eal_event_create(lmice_event_t* e)
@@ -76,7 +73,3 @@ int eal_event_create(lmice_event_t* e)
 }
 
 #endif
-<<<<<<< HEAD
-
-=======
->>>>>>> cfcb6e7355e0dd5febef1e2bcb875d631c9ec2b7
