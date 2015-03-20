@@ -50,7 +50,15 @@ enum lmice_common
     TICKER_TYPE = 1,
     TIMER_TYPE = 2,
     CUSTOM_TYPE = 3,
-    INFINITY = -1
+    INFINITY = -1,
+
+    PUBLISH_RESOURCE_TYPE = 1,
+    SUBSCRIBE_RESOURCE_TYPE = 2,
+    TIMER_EVENT_TYPE = 3,
+    TICKER_EVENT_TYPE = 4,
+    CUSTOM_EVENT_TYPE = 5,
+    QOS_CONTROL_TYPE = 6,
+    TRUST_CONTROL_TYPE
 };
 
 struct lmice_instance_info_s
@@ -86,8 +94,10 @@ typedef struct lmice_server_info_s lmice_server_info_t;
 
 struct lmice_resource_s
 {
-    int32_t         type;   //publish subscribe
-    int32_t         state;  // 0 freed 1 using
+    int32_t         type;   // publish subscribe
+    uint32_t        size;   // struct size(bytes)
+    int32_t         state;  // 0 freed 1 modify 2 work
+    int64_t         time;   // state lock time
     lmice_shm_t     shm;
     lmice_event_t   evt;
 };
