@@ -34,6 +34,20 @@ int eal_event_hash_name(uint64_t hval, char *name)
 #if defined(_WIN32)
 
 
+int eal_event_open(lmice_event_t* e)
+{
+    e->fd = OpenEventA( EVENT_ALL_ACCESS, FALSE, e->name);
+    if(e->fd == NULL)
+    {
+        DWORD hr = GetLastError();
+        lmice_error_print("Open event[%s] failed[%u]", e->name, hr);
+        e->fd = 0;
+        return 1;
+    }
+    lmice_debug_print("event[%s] created as[%d]", e->name, (uint64_t)e->fd);
+    return 0;
+}
+
 int eal_event_create(lmice_event_t* e)
 {
     e->fd = CreateEventA(
@@ -60,9 +74,20 @@ int eal_event_zero(lmice_event_t *e)
 }
 
 
-int eal_event_awake(uint64_t eid)
+int eal_event_awake(uint64_t event_id)
 {
-    return SetEvent((HANDLE)eid);
+    return SetEvent((HANDLE)event_id);
+}
+
+int eal_event_destroy(lmice_event_t *e)
+{
+    BOOL ret = 1;
+    if(e->fd != 0)
+    {
+        ret = CloseHandle( e->fd );
+        e->fd = 0;
+    }
+    return ret != 0 ? 0 : 1;
 }
 
 #elif defined(__APPLE__) || defined(__LINUX__)

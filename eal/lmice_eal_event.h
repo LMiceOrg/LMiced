@@ -34,8 +34,9 @@ typedef struct lmice_event_s lmice_event_t;
 int eal_event_zero(lmice_event_t* e);
 
 int eal_event_create(lmice_event_t *e);
-int eal_event_destroy(uint64_t eid);
-int eal_event_awake(uint64_t eid);
+int eal_event_destroy(lmice_event_t* e);
+int eal_event_open(lmice_event_t* e);
+int eal_event_awake(uint64_t event_id);
 
 int eal_event_hash_name(uint64_t hval, char *name);
 

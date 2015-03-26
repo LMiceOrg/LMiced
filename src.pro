@@ -46,12 +46,18 @@ HEADERS += \
 #Common config
 INCLUDEPATH += eal
 
+CONFIG(debug, debug|release) {
+    DESTDIR = "$$OUT_PWD/../build/debug"
+} else {
+    DESTDIR = "$$OUT_PWD/../build/release"
+}
+
 macx-clang*{
 message("MacX Darwin")
 
 INCLUDEPATH += ../lib/jansson/bin/include
-LIBS += -L../lib/jansson/bin/lib
-LIBS += -ljansson
+#LIBS += -L../lib/jansson/bin/lib
+#LIBS += -ljansson
 
 QMAKE_CFLAGS += -std=c89 -funit-at-a-time -Wno-unused-function
 DEFINES += inline=__inline__
@@ -61,7 +67,12 @@ QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 win32-msvc* {
 
 message("Windows MSVC")
-QMAKE_CFLAGS += -std=c89
+#QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
+
+QMAKE_LFLAGS_DEBUG += /MTd
+QMAKE_LFLAGS_DEBUG -= /MDd
+QMAKE_LFLAGS_RELEASE += /MT
+QMAKE_LFLAGS_RELEASE -= /MD
 }

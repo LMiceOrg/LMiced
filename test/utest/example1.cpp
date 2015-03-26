@@ -7,24 +7,14 @@
 #include "eal/lmice_trace.h"
 #include "eal/lmice_eal_thread.h"
 #include "eal/lmice_eal_spinlock.h"
-
+#include "rtspace.h"
+#include "resource/resource_manage.h"
 }
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 
-class lmice_resource
-{
-public:
-    void* operator() () const
-    {
-        return m_ptr;
-    }
-private:
-    void* m_ptr;
-    int size;
-};
 
 class lmice_event_callback
 {
@@ -61,41 +51,10 @@ enum lmice_common
     TRUST_CONTROL_TYPE
 };
 
-struct lmice_instance_info_s
-{
-    uint32_t version;
-    uint32_t size;
-
-    uint64_t process_id;    //system process id
-    uint64_t instance_id;   //client or server instance identity
-};
-
-typedef struct lmice_instance_info_s lmice_instance_info_t;
-
-struct lmice_time_s
-{
-    int64_t system_time;
-    int64_t tick_rate;
-    int64_t tick_time;
-    int64_t tick_zero_system_time;
-};
-typedef struct lmice_time_s lmice_time_t;
-
-struct lmice_server_info_s
-{
-    uint64_t lock;
-    uint64_t eid;
-    lmice_time_t tm;
-    lmice_instance_info_t inst[MAX_CLIENT_COUNT];
-
-};
-
-typedef struct lmice_server_info_s lmice_server_info_t;
 
 struct lmice_resource_s
 {
-    int32_t         type;   // publish subscribe
-    uint32_t        size;   // struct size(bytes)
+    uint32_t        type;   // publish subscribe
     int32_t         state;  // 0 freed 1 modify 2 work
     int64_t         time;   // state lock time
     lmice_shm_t     shm;
@@ -105,33 +64,41 @@ typedef struct lmice_resource_s lmice_resource_t;
 
 struct lmice_timer_s
 {
-    int32_t type;                   //ticker timer
+    uint32_t type;                   //ticker timer
     int32_t state;                  // 状态
     int32_t size;                   // 触发计数量
     int32_t tick;                   // 周期长度
     lmice_event_t   evt;            // 响应事件
 
     // 状态量
-    int64_t count;                  // 已完成触发数量
+    uint64_t count;                 // 已完成触发数量
     int64_t begin_tick;             // 开始时间
 };
 typedef struct lmice_timer_s lmice_timer_t;
 
 struct lmice_custom_event_s
 {
+    uint32_t type;
+    uint32_t size;
     int32_t state;
-    int32_t size;
-    uint64_t evts[16];
+    int32_t reserved;
+    uint64_t eids[16];
+    uint64_t id;
     lmice_event_t evt;
 };
 typedef struct lmice_custom_event_s lmice_custom_event_t;
 
+
+
 struct lmice_client_info_s
 {
-    uint64_t lock;
-    uint64_t eid;
+    uint32_t type;
     uint32_t version;
     uint32_t size;
+    uint64_t lock;
+    uint64_t eid;
+    uint64_t next_client;
+
     lmice_timer_t timer[128];
     lmice_custom_event_t ce[128];
     lmice_resource_t res[128];
@@ -142,6 +109,9 @@ typedef struct lmice_client_info_s lmice_client_info_t;
 class lmice_spi
 {
 public:
+
+    // 辅助函数
+    int open_shm(uint64_t hval, lmice_shm_t* shm);
     int init();
     //场景管理
     int join_session(uint64_t session_id);
@@ -166,23 +136,27 @@ public:
 
 public:
     uint64_t    m_sid;
+    uint64_t    m_tid;
     uint64_t    m_iid;
     uint64_t    m_pid;
     uint64_t    m_server_eid;
     lmice_client_info_t *m_client;
-    lmice_server_info_t *m_server;
+    lm_server_info_t *m_server;
+    lmice_event_t     m_server_evt;
 };
 
+lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*16,0, 0,   CLIENT_SHMNAME};
+lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE*2, 0,0,  BOARD_SHMNAME};
 
-#define CLIENT_SHMNAME "CC597303-0F85-40B2-8BDC-4724BD" /** C87B4E */
-#define BOARD_SHMNAME "82E0EE49-382C-40E7-AEA2-495999" /** 392D29 */
-#define DEFAULT_SHM_SIZE 4096 /** 4KB */
+int lmice_spi::open_shm(uint64_t hval, lmice_shm_t* shm)
+{
+    int ret;
 
-#define LMICE_VERSION 1
-
-
-lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*16, 0,   CLIENT_SHMNAME};
-lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE*2, 0,  BOARD_SHMNAME};
+    eal_shm_zero(shm);
+    ret = eal_shm_hash_name(hval, shm->name);
+    ret = eal_shm_open_readwrite(shm);
+    return ret;
+}
 
 int lmice_spi::init()
 {
@@ -198,20 +172,22 @@ int lmice_spi::init()
     //默认session_id = 0
     m_sid = 0;
 
+    //默认type id = 0
+    m_tid = 0;
+
     //获取当前进程ID
     m_pid = getpid();
 
     //打开平台公共区域共享内存
     hval = eal_hash64_fnv1a(BOARD_SHMNAME, sizeof(BOARD_SHMNAME)-1);
     eal_shm_hash_name(hval, board_shm.name);
-    //ret = eal_shm_open_readwrite(&board_shm);
-    ret = eal_shm_create(&board_shm);
+    ret = eal_shm_open_readwrite(&board_shm);
     if(ret != 0)
     {
         lmice_critical_print("open board_shm failed\n");
         return 1;
     }
-    m_server = (lmice_server_info_t*)((void*)(board_shm.addr));
+    m_server = (lm_server_info_t*)((void*)(board_shm.addr));
 
     //新建客户端共享内存区域
     m_iid = eal_hash64_fnv1a(&m_pid, sizeof(m_pid));
@@ -230,19 +206,30 @@ int lmice_spi::init()
 
     m_client = (lmice_client_info_t*)((void*)client_shm.addr);
 
-    lmice_event_t e;
-    eal_event_zero(&e);
-    eal_event_hash_name(hval, e.name);
-    lmice_debug_print("create client event[%s]", e.name);
-    eal_event_create(&e);
-    m_client->eid = (uint64_t)e.fd;
+    lmice_event_t ec;
+    eal_event_zero(&ec);
+    eal_event_hash_name(hval, ec.name);
+    lmice_debug_print("create client event[%s]", ec.name);
+    eal_event_create(&ec);
+    m_client->eid = (uint64_t)ec.fd;
     lmice_debug_print("create client event [%ull]", m_client->eid);
 
+    lmice_event_t m_server_evt;
+    eal_event_zero(&m_server_evt);
+    eal_event_hash_name(m_server->event_id, m_server_evt.name);
+    ret = eal_event_open(&m_server_evt);
+    if(ret != 0)
+    {
+        lmice_critical_print("open server event failed[%d]", ret);
+        return 1;
+    }
     //注册客户端信息到平台
     do {
-        lmice_instance_info_t info={LMICE_VERSION,
-                                    client_shm.size,
+        lm_instance_info_t info={LMICE_VERSION,
+                                    0,
                                     m_pid,
+                                    pthread_self(),
+                                    m_tid,
                                     m_iid};
         //        info.version = LMICE_VERSION;
         //        info.size = DEFAULT_SHM_SIZE;
@@ -251,11 +238,11 @@ int lmice_spi::init()
 
         ret = eal_spin_lock( &m_server->lock );
 
-        lmice_instance_info_t *p;
+        lm_instance_info_t *p;
         int i;
-        for(p= m_server->inst,i=0; i<MAX_CLIENT_COUNT;++p, ++i)
+        for(p= &m_server->inst,i=0; i<MAX_CLIENT_COUNT;++p, ++i)
         {
-            if(p->process_id == 0)
+            if(p->instance_id == 0)
             {
                 memcpy(p, &info, sizeof(info));
                 break;
@@ -264,7 +251,7 @@ int lmice_spi::init()
         eal_spin_unlock(&m_server->lock);
 
         //唤醒平台管理
-        eal_event_awake(m_server->eid);
+        eal_event_awake((uint64_t)m_server_evt.fd);
 
     } while(0);
 
@@ -350,7 +337,7 @@ int lmice_spi::register_publish(const char *type, const char *inst, int size, ui
     *event_id = (uint64_t)res->evt.fd;
     //注册IPC信息,通知平台更新
     res->state = WORK_RESOURCE;
-    eal_event_awake(m_server->eid);
+    eal_event_awake((uint64_t)m_server_evt.fd);
 
     return 0;
 
@@ -407,7 +394,7 @@ int lmice_spi::register_subscribe(const char* type, const char* inst, uint64_t *
     *event_id = (uint64_t)res->evt.fd;
     //注册IPC信息,通知平台更新
     res->state = WORK_RESOURCE;
-    eal_event_awake(m_server->eid);
+    eal_event_awake((uint64_t)m_server_evt.fd);
 
     return 0;
 }
@@ -467,7 +454,8 @@ int lmice_spi::register_tick_event(int period, int size, int begin, uint64_t* ev
 
     //注册IPC信息,通知平台更新
     timer->state = WORK_RESOURCE;
-    eal_event_awake(m_server->eid);
+    eal_event_awake((uint64_t)m_server_evt.fd);
+    return 0;
 }
 
 int lmice_spi::register_timer_event(int period, int size, int begin, uint64_t* event_id)
@@ -525,7 +513,7 @@ int lmice_spi::register_timer_event(int period, int size, int begin, uint64_t* e
 
     //注册IPC信息,通知平台更新
     timer->state = WORK_RESOURCE;
-    eal_event_awake(m_server->eid);
+    eal_event_awake((uint64_t)m_server_evt.fd);
 }
 
 int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t *event_id)
@@ -566,23 +554,25 @@ int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t
     ev->size = size;
     for(sz = 0; sz < size; ++sz)
     {
-        ev->evts[sz] = *(event_list+sz);
+        ev->eids[sz] = *(event_list+sz);
     }
 
     //资源事件
-    eal_event_zero(&ev->evt);
-    eal_event_hash_name(hval, ev->evt.name);
-    ret = eal_event_create(&ev->evt);
+    lmice_event_t &evt = ev->evt;
+    eal_event_zero(&evt);
+    eal_event_hash_name(hval, evt.name);
+    ret = eal_event_create(&evt);
     if(ret != 0)
     {
         ev->state = FREE_RESOURCE;
         lmice_critical_print("create custom event(%ld[%ld]) failed(%d)\n", *event_list, size, ret);
         return ret;
     }
-    *event_id = (uint64_t)ev->evt.fd;
+    *event_id = (uint64_t)evt.fd;
+    ev->id = *event_id;
     //注册IPC信息,通知平台更新
     ev->state = WORK_RESOURCE;
-    eal_event_awake(m_server->eid);
+    eal_event_awake((uint64_t)m_server_evt.fd);
 
 }
 
@@ -673,16 +663,31 @@ int lmice_spi::join()
 
 void lmice_spi::printclients()
 {
-    lmice_instance_info_t *inst;
+    lm_instance_info_t *inst;
     int i;
     int pos = 0;
-    for(inst = m_server->inst, i=0;i<MAX_CLIENT_COUNT; ++inst, ++i)
+    for(i=0; i<2;++i)
     {
-        if(inst->process_id != 0)
+        Sleep(1);
+        int64_t tm = m_server->tm.system_time;
+        SYSTEMTIME st;
+        FileTimeToSystemTime((FILETIME*)&tm, &st);
+
+        printf("%llu\n%d-%d-%d %d:%d:%d %d\n",
+               tm,
+               st.wYear, st.wMonth, st.wDay,
+               st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+    }
+    for(inst = &m_server->inst, i=0;i<MAX_CLIENT_COUNT; ++inst, ++i)
+    {
+        if(inst->instance_id != 0)
         {
             ++pos;
-            lmice_debug_print("inst[ %d ] version %d, size %d, instid=%llX, processid =%lld", pos, inst->version,
-                              inst->size, inst->instance_id, inst->process_id);
+            lmice_debug_print("inst[ %d ] version %d, processid =%llu, threadid= %llu, instid=%llX",
+                              pos, inst->version,
+                              inst->process_id,
+                              inst->thread_id,
+                              inst->instance_id);
         }
     }
 }
@@ -712,7 +717,24 @@ int main(int argc, char* argv[])
 {
     int ret;
 
-    spi.init();
+    //    printf("sizeof(short)     = %d\n", sizeof(short));
+    //            printf("sizeof(int)       = %d\n", sizeof(int));
+    //            printf("sizeof(long)      = %d\n", sizeof(long));
+    //            printf("sizeof(long long) = %d\n\n", sizeof(long long));
+
+    //            printf("sizeof(size_t)    = %d\n", sizeof(size_t));
+    //            printf("sizeof(off_t)     = %d\n", sizeof(off_t));
+    //            printf("sizeof(void *)    = %d\n", sizeof(void *));
+    //    return 1;
+
+    ret = spi.init();
+
+    if(ret !=0)
+    {
+        lmice_critical_print("init failed[%d]", ret);
+        return 1;
+    }
+
 
     if(argc > 1)
     {

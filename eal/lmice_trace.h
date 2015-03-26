@@ -66,17 +66,18 @@ extern lmice_trace_name_t lmice_trace_name[];
     printf(":" format "\n", ##__VA_ARGS__); \
     }while (0);
 
-#define LMICE_TRACE_COLOR_PRINT_PER_THREAD(type, format, ...) do{ \
+#define LMICE_TRACE_COLOR_PRINT_PER_THREAD(type, format, ...) \
+    do{ \
     int ret;    \
     size_t sz;  \
     time_t tm;  \
     char current_time[26];  \
     char thread_name[32]; \
-    if(lmice_trace_debug_mode == 0 && type == lmice_trace_debug)  \
+    if(lmice_trace_debug_mode == 0 && \
+        type == lmice_trace_debug)  \
         break; \
     time(&tm);  \
     ctime_r(&tm, current_time); \
-    /*change newline to space */    \
     current_time[24] = ' '; \
     ret = pthread_getname_np(pthread_self(), thread_name, 32);  \
     if(ret == 0) {   \
@@ -85,18 +86,18 @@ extern lmice_trace_name_t lmice_trace_name[];
         else ret = 0;   \
     }   \
     printf(current_time); \
-    LMICE_TRACE_COLOR_TAG3(type) \
-    if(ret == 0)    \
-        printf(":[%d:%s]" \
-            format \
-            "\n", \
-            getpid(), thread_name, ##__VA_ARGS__); \
-    else    \
-        printf(":[%d:0x%x]" \
-            format \
-            "\n", \
-            getpid(), pthread_self(), ##__VA_ARGS__); \
+    LMICE_TRACE_COLOR_TAG3(type); \
+    if(ret == 0) {   \
+        printf(":[%d:%s]", getpid(), thread_name); \
+        printf(format , ##__VA_ARGS__); \
+        printf("\n"); \
+    } else {    \
+        printf(":[%d:0x%x]", getpid(), pthread_self()); \
+        printf(format , ##__VA_ARGS__); \
+        printf("\n"); \
+    }   \
     }while (0);
+
 
 #else /** Posix */
 #define LMICE_TRACE_COLOR_PRINT(type, format, ...) do{ \

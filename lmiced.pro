@@ -3,50 +3,60 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
-SOURCES += main.cpp \
-    resource/resource_shm.cpp \
-    resource/resource_meta_data.c \
-    system/config.cpp \
-    system/system_environment.cpp \
-    system/system_signal.cpp \
-    system/system_worker.cpp \
-    system/system_master.cpp \
-    resource/resouce_manage.cpp \
-    timer/timer_system_time.cpp \
-    timer/timer_oneshot.cpp \
-    resource/resource.cpp
+SOURCES += main.c \
+timer/timer_system_time.c \
+resource/resouce_manage.c \
+    trust/trust_manage.c
+#    main.cpp \
+#    resource/resource_shm.cpp \
+#    resource/resource_meta_data.c \
+#    system/config.cpp \
+#    system/system_environment.cpp \
+#    system/system_signal.cpp \
+#    system/system_worker.cpp \
+#    system/system_master.cpp \
+#    resource/resouce_manage.cpp \
+#    timer/timer_system_time.cpp \
+#    timer/timer_oneshot.cpp \
+#    resource/resource.cpp
 
 OTHER_FILES += \
     README.txt
 
 HEADERS += \
-    system/system_environment.h \
-    system/system_signal.h \
-    system/system_environment_internal.h \
-    system/system_worker.h      system/config.h \
-    resource/resourec_shm.h \
-    resource/resource_shm_internal.h \
-    resource/resource_meta_data.h \
-    resource/resource_meta_data_internal.h \
-state/state_action.h		state/state_serialize_engine.h \
-state/state_event.h		state/state_serialize_json.h \
-state/state_guard.h		state/state_transition.h \
-state/state_machine.h		state/state_type.h \
-    system/system_master.h \
-    eal/lmice_eal_thread_pthread.h \
-    eal/lmice_eal_common.h \
-    resource/resource_manage.h \
-    timer/timer_system_time.h
+    rtspace.h \
+timer/timer_system_time.h   \
+resource/resource_manage.h \
+    trust/trust_manage.h
+#    system/system_environment.h \
+#    system/system_signal.h \
+#    system/system_environment_internal.h \
+#    system/system_worker.h      system/config.h \
+#    resource/resourec_shm.h \
+#    resource/resource_shm_internal.h \
+#    resource/resource_meta_data.h \
+#    resource/resource_meta_data_internal.h \
+#state/state_action.h		state/state_serialize_engine.h \
+#state/state_event.h		state/state_serialize_json.h \
+#state/state_guard.h		state/state_transition.h \
+#state/state_machine.h		state/state_type.h \
+#    system/system_master.h \
+#    eal/lmice_eal_thread_pthread.h \
+#    eal/lmice_eal_common.h \
+#    resource/resource_manage.h \
+#
 
 INCLUDEPATH += eal .
 win32-msvc* {
 message("LMiced - Windows MSVC")
-QMAKE_CFLAGS += -std=c89
+#QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG -D_CRT_SECURE_NO_WARNINGS
 
 INCLUDEPATH += ../lib/jansson-2.7/build/include ../lib/sglib-1.0.4
-LIBS += -L../lib/jansson-2.7/build/lib/Release -ljansson
+
+LIBS += -L../build/debug
+LIBS += -lWinmm -lsrc -L../lib/jansson-2.7/build/lib/Release -ljansson
 }
 
 macx-clang*{

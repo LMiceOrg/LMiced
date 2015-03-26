@@ -1,6 +1,7 @@
 #ifndef LMICE_EAL_COMMON_H
 #define LMICE_EAL_COMMON_H
 
+#define UNREFERENCED_PARAM(param) (void)param
 /**
   support gcc msvc
 */

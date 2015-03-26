@@ -3,6 +3,19 @@
 
 #include "lmice_eal_common.h"
 #include <time.h>
+#include <stdint.h>
+
+/**
+    msdn.microsoft.com/en-us/magazine/cc163996.aspx
+    Implement a Continuously Updating, High-Resolution Time Provider for Windows
+*/
+
+int forceinline get_system_time(int64_t* t)
+{
+    LPFILETIME ft = (LPFILETIME)t;
+    GetSystemTimeAsFileTime(ft);
+    return 0;
+}
 
 void forceinline usleep(int usec){
     LARGE_INTEGER litmp;

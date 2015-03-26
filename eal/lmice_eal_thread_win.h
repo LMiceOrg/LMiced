@@ -12,12 +12,16 @@ pid_t forceinline pthread_self()
 
 int forceinline pthread_getname_np(DWORD tid, char* name, size_t sz)
 {
+    UNREFERENCED_PARAM(tid);
+    UNREFERENCED_PARAM(name);
+    UNREFERENCED_PARAM(sz);
     /* No implementation*/
     return -1;
 }
 
 int forceinline pthread_setname_np(const char* name)
 {
+    UNREFERENCED_PARAM(name);
     return 0;
 }
 

@@ -5,9 +5,8 @@ CONFIG -= qt
 
 SOURCES += example1.cpp
 
-INCLUDEPATH += ../..
+INCLUDEPATH += ../..  ../../../rtspace
 
-
-LIBS += -L../../../build-src-Desktop_Qt_5_4_0_MSVC2013_OpenGL_64bit/debug
+LIBS += -L../../../build/debug
 
 LIBS += -lsrc
