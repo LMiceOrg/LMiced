@@ -135,13 +135,13 @@ public:
     void printclients();
 
 public:
-    uint64_t    m_sid;
-    uint64_t    m_tid;
-    uint64_t    m_iid;
-    uint64_t    m_pid;
+    uint64_t    m_session_id;
+    uint64_t    m_type_id;
+    uint64_t    m_inst_id;
+    pid_t       m_process_id;
     uint64_t    m_server_eid;
     lmice_client_info_t *m_client;
-    lm_server_info_t *m_server;
+    lm_server_t *m_server;
     lmice_event_t     m_server_evt;
 };
 
@@ -164,19 +164,19 @@ int lmice_spi::init()
     uint64_t hval;
 
     //避免重复初始化
-    if(m_pid != 0
+    if(m_process_id != 0
             && m_client != 0
             && m_server != 0)
         return 0;
 
     //默认session_id = 0
-    m_sid = 0;
+    m_session_id = 0;
 
     //默认type id = 0
-    m_tid = 0;
+    m_type_id = 0;
 
     //获取当前进程ID
-    m_pid = getpid();
+    m_process_id = getpid();
 
     //打开平台公共区域共享内存
     hval = eal_hash64_fnv1a(BOARD_SHMNAME, sizeof(BOARD_SHMNAME)-1);
@@ -187,12 +187,12 @@ int lmice_spi::init()
         lmice_critical_print("open board_shm failed\n");
         return 1;
     }
-    m_server = (lm_server_info_t*)((void*)(board_shm.addr));
+    m_server = (lm_server_t*)((void*)(board_shm.addr));
 
     //新建客户端共享内存区域
-    m_iid = eal_hash64_fnv1a(&m_pid, sizeof(m_pid));
-    m_iid = eal_hash64_more_fnv1a(CLIENT_SHMNAME, sizeof(CLIENT_SHMNAME)-1, m_iid);
-    eal_shm_hash_name(m_iid, client_shm.name);
+    m_inst_id = eal_hash64_fnv1a(&m_process_id, sizeof(m_process_id));
+    m_inst_id = eal_hash64_more_fnv1a(CLIENT_SHMNAME, sizeof(CLIENT_SHMNAME)-1, m_inst_id);
+    eal_shm_hash_name(m_inst_id, client_shm.name);
     ret = eal_shm_create(&client_shm);
     if(ret != 0)
     {
@@ -225,12 +225,12 @@ int lmice_spi::init()
     }
     //注册客户端信息到平台
     do {
-        lm_instance_info_t info={LMICE_VERSION,
+        lm_worker_info_t info={LMICE_VERSION,
                                     0,
-                                    m_pid,
+                                    m_process_id,
                                     pthread_self(),
-                                    m_tid,
-                                    m_iid};
+                                    m_type_id,
+                                    m_inst_id};
         //        info.version = LMICE_VERSION;
         //        info.size = DEFAULT_SHM_SIZE;
         //        info.process_id = m_pid;
@@ -238,9 +238,9 @@ int lmice_spi::init()
 
         ret = eal_spin_lock( &m_server->lock );
 
-        lm_instance_info_t *p;
+        lm_worker_info_t *p;
         int i;
-        for(p= &m_server->inst,i=0; i<MAX_CLIENT_COUNT;++p, ++i)
+        for(p= &m_server->worker,i=0; i<MAX_CLIENT_COUNT;++p, ++i)
         {
             if(p->instance_id == 0)
             {
@@ -251,7 +251,7 @@ int lmice_spi::init()
         eal_spin_unlock(&m_server->lock);
 
         //唤醒平台管理
-        eal_event_awake((uint64_t)m_server_evt.fd);
+        eal_event_awake(m_server_evt.fd);
 
     } while(0);
 
@@ -261,14 +261,16 @@ int lmice_spi::init()
 //加入场景
 int lmice_spi::join_session(uint64_t session_id)
 {
-    m_sid = session_id;
+    m_session_id = session_id;
     return 0;
 }
 
 //退出场景
 int lmice_spi::leave_session(uint64_t session_id)
 {
-    m_sid = DEFAULT_SESSION_ID;
+    UNREFERENCED_PARAM(session_id);
+
+    m_session_id = DEFAULT_SESSION_ID;
     return 0;
 }
 
@@ -284,7 +286,7 @@ int lmice_spi::register_publish(const char *type, const char *inst, int size, ui
 {
     int ret;
     uint64_t hval;
-    hval = eal_hash64_fnv1a(&m_sid, sizeof(m_sid));
+    hval = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
     hval = eal_hash64_more_fnv1a(type, sizeof(type)-1, hval);
     hval = eal_hash64_more_fnv1a(inst, sizeof(inst)-1, hval);
 
@@ -337,7 +339,7 @@ int lmice_spi::register_publish(const char *type, const char *inst, int size, ui
     *event_id = (uint64_t)res->evt.fd;
     //注册IPC信息,通知平台更新
     res->state = WORK_RESOURCE;
-    eal_event_awake((uint64_t)m_server_evt.fd);
+    eal_event_awake(m_server_evt.fd);
 
     return 0;
 
@@ -347,7 +349,7 @@ int lmice_spi::register_subscribe(const char* type, const char* inst, uint64_t *
 {
     int ret;
     uint64_t hval;
-    hval = eal_hash64_fnv1a(&m_sid, sizeof(m_sid));
+    hval = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
     hval = eal_hash64_more_fnv1a(type, sizeof(type)-1, hval);
     if(inst != 0)
         hval = eal_hash64_more_fnv1a(inst, sizeof(inst)-1, hval);
@@ -394,7 +396,7 @@ int lmice_spi::register_subscribe(const char* type, const char* inst, uint64_t *
     *event_id = (uint64_t)res->evt.fd;
     //注册IPC信息,通知平台更新
     res->state = WORK_RESOURCE;
-    eal_event_awake((uint64_t)m_server_evt.fd);
+    eal_event_awake(m_server_evt.fd);
 
     return 0;
 }
@@ -403,8 +405,8 @@ int lmice_spi::register_tick_event(int period, int size, int begin, uint64_t* ev
 {
     int ret = TICKER_TYPE;
     uint64_t hval;
-    hval = eal_hash64_fnv1a(&m_sid, sizeof(m_sid));
-    hval = eal_hash64_more_fnv1a(&m_pid, sizeof(m_pid), hval);
+    hval = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
+    hval = eal_hash64_more_fnv1a(&m_process_id, sizeof(m_process_id), hval);
     hval = eal_hash64_more_fnv1a(&ret, sizeof(ret), hval);
     hval = eal_hash64_more_fnv1a(&period, sizeof(period), hval);
     hval = eal_hash64_more_fnv1a(&begin, sizeof(begin), hval);
@@ -454,7 +456,7 @@ int lmice_spi::register_tick_event(int period, int size, int begin, uint64_t* ev
 
     //注册IPC信息,通知平台更新
     timer->state = WORK_RESOURCE;
-    eal_event_awake((uint64_t)m_server_evt.fd);
+    eal_event_awake(m_server_evt.fd);
     return 0;
 }
 
@@ -462,8 +464,8 @@ int lmice_spi::register_timer_event(int period, int size, int begin, uint64_t* e
 {
     int ret = TIMER_TYPE;
     uint64_t hval;
-    hval = eal_hash64_fnv1a(&m_sid, sizeof(m_sid));
-    hval = eal_hash64_more_fnv1a(&m_pid, sizeof(m_pid), hval);
+    hval = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
+    hval = eal_hash64_more_fnv1a(&m_process_id, sizeof(m_process_id), hval);
     hval = eal_hash64_more_fnv1a(&ret, sizeof(ret), hval);
     hval = eal_hash64_more_fnv1a(&period, sizeof(period), hval);
     hval = eal_hash64_more_fnv1a(&begin, sizeof(begin), hval);
@@ -513,7 +515,8 @@ int lmice_spi::register_timer_event(int period, int size, int begin, uint64_t* e
 
     //注册IPC信息,通知平台更新
     timer->state = WORK_RESOURCE;
-    eal_event_awake((uint64_t)m_server_evt.fd);
+    eal_event_awake(m_server_evt.fd);
+    return 0;
 }
 
 int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t *event_id)
@@ -522,8 +525,8 @@ int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t
     uint64_t hval;
     size_t sz;
     int i;
-    hval = eal_hash64_fnv1a(&m_sid, sizeof(m_sid));
-    hval = eal_hash64_more_fnv1a(&m_pid, sizeof(m_pid), hval);
+    hval = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
+    hval = eal_hash64_more_fnv1a(&m_process_id, sizeof(m_process_id), hval);
     hval = eal_hash64_more_fnv1a(&ret, sizeof(ret), hval);
     hval = eal_hash64_more_fnv1a(&size, sizeof(size), hval);
     for(sz = 0; sz < size; ++sz)
@@ -572,8 +575,8 @@ int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t
     ev->id = *event_id;
     //注册IPC信息,通知平台更新
     ev->state = WORK_RESOURCE;
-    eal_event_awake((uint64_t)m_server_evt.fd);
-
+    eal_event_awake(m_server_evt.fd);
+    return 0;
 }
 
 int lmice_spi::set_tc_level(int level)
@@ -663,7 +666,7 @@ int lmice_spi::join()
 
 void lmice_spi::printclients()
 {
-    lm_instance_info_t *inst;
+    lm_worker_info_t *inst;
     int i;
     int pos = 0;
     for(i=0; i<2;++i)
@@ -678,7 +681,7 @@ void lmice_spi::printclients()
                st.wYear, st.wMonth, st.wDay,
                st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
     }
-    for(inst = &m_server->inst, i=0;i<MAX_CLIENT_COUNT; ++inst, ++i)
+    for(inst = &m_server->worker, i=0;i<MAX_CLIENT_COUNT; ++inst, ++i)
     {
         if(inst->instance_id != 0)
         {
@@ -758,11 +761,11 @@ int main(int argc, char* argv[])
     //注册仿真时间定时器
     uint64_t etick, ttick;
     lmice_critical_print("begin ticker");
-    spi.register_tick_event(30, INFINITY, TICK_NOW, &etick);
+    spi.register_tick_event(30, INFINITE, TICK_NOW, &etick);
 
     //注册系统定时器
     lmice_critical_print("begin timer");
-    spi.register_timer_event(30, INFINITY, TIMER_NOW, &ttick);
+    spi.register_timer_event(30, INFINITE, TIMER_NOW, &ttick);
 
     //注册事件状态机
     uint64_t evts[2], cevt;

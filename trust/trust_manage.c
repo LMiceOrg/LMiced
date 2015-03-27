@@ -15,25 +15,23 @@
 
 static forceinline void trust_resource_compute(lm_trust_t* pt)
 {
-    size_t size = 0;
     size_t pos = 0;
     int ret = 0;
-    lm_instance_info_t *inst=NULL;
-    lm_server_info_t *server = pt->server;
+    lm_worker_info_t *inst=NULL;
+    lm_server_t *server = pt->server;
     ret = eal_spin_trylock(&server->lock);
-    size = (server->size - 96) / sizeof(lm_instance_info_t);
-    for(inst = &server->inst, pos = 0; pos < size; ++inst, ++pos)
+    for(inst = &server->worker, pos = 0; pos < DEFAULT_CLIENT_SIZE; ++inst, ++pos)
     {
         HANDLE hProcess = NULL;
         HANDLE hThread = NULL;
         DWORD err;
-        lm_instance_info_t null_inst = {0,0,0,0,0,0};
+        lm_worker_info_t null_inst = {0,0,0,0,0,0};
 
         /* if it's empty, go check next */
-        if( memcmp(inst, &null_inst, sizeof(lm_instance_info_t)) == 0)
+        if( memcmp(inst, &null_inst, sizeof(lm_worker_info_t)) == 0)
             continue;
 
-        /* check version */
+        /* check version, only check LMICE_VERSION */
         if(inst->version != LMICE_VERSION)
             continue;
 
@@ -46,8 +44,8 @@ static forceinline void trust_resource_compute(lm_trust_t* pt)
             if(hProcess == NULL)
             {
                 err = GetLastError();
-                lmice_debug_print("process[%llu] open failed[%u]\n", inst->process_id, err);
-                memset(inst, 0, sizeof(lm_instance_info_t));
+                lmice_debug_print("process[%u] open failed[%u]\n", inst->process_id, err);
+                memset(inst, 0, sizeof(lm_worker_info_t));
                 continue;
             }
             CloseHandle(hProcess);
@@ -63,7 +61,7 @@ static forceinline void trust_resource_compute(lm_trust_t* pt)
             {
                 err = GetLastError();
                 lmice_debug_print("thread[%llu] open failed[%u]\n", inst->thread_id, err);
-                memset(inst, 0, sizeof(lm_instance_info_t));
+                memset(inst, 0, sizeof(lm_worker_info_t));
                 if(hProcess)
                     CloseHandle(hProcess);
                 continue;
@@ -73,7 +71,7 @@ static forceinline void trust_resource_compute(lm_trust_t* pt)
 
         if(inst->process_id == 0 && inst->thread_id == 0)
         {
-            memset(inst, 0, sizeof(lm_instance_info_t));
+            memset(inst, 0, sizeof(lm_worker_info_t));
         }
 
     }

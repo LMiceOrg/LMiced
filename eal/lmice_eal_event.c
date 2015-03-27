@@ -74,18 +74,31 @@ int eal_event_zero(lmice_event_t *e)
 }
 
 
-int eal_event_awake(uint64_t event_id)
+int eal_event_awake(evtfd_t fd)
 {
-    return SetEvent((HANDLE)event_id);
+    BOOL ret = 1;
+    if(fd)
+        ret = SetEvent(fd);
+    return ret != 0 ? 0 : 1;
 }
 
 int eal_event_destroy(lmice_event_t *e)
 {
     BOOL ret = 1;
-    if(e->fd != 0)
+    if(e->fd)
     {
         ret = CloseHandle( e->fd );
         e->fd = 0;
+    }
+    return ret != 0 ? 0 : 1;
+}
+
+int eal_event_close(evtfd_t fd)
+{
+    BOOL ret = 1;
+    if(fd)
+    {
+        ret = CloseHandle( fd );
     }
     return ret != 0 ? 0 : 1;
 }

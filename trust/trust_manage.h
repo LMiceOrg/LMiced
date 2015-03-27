@@ -9,7 +9,7 @@
 #if defined(_WIN32)
 struct lmice_trust_s
 {
-    lm_server_info_t *server;
+    lm_server_t *server;
     MMRESULT    wTimerID;
     UINT        wTimerRes;
     UINT        wTimerDelay;

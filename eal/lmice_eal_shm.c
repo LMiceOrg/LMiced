@@ -179,7 +179,7 @@ int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
         return err;
     }
 
-    shm->addr = (uint64_t) MapViewOfFile(
+    shm->addr = MapViewOfFile(
                 shm->fd, // handle to map object
                 access,  // read/write permission
                 0,
@@ -191,7 +191,7 @@ int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
         err = GetLastError();
         lmice_error_print("Could not map view of file (%d).\n", err);
 
-        eal_shm_close(shm);
+        eal_shm_close(shm->fd, shm->addr);
 
         return err;
     }
@@ -235,7 +235,7 @@ int eal_shm_create(lmice_shm_t* shm)
     }
 
     shm->fd = hMapFile;
-    shm->addr = (uint64_t)pBuf;
+    shm->addr = pBuf;
 
     return 0;
 
@@ -245,7 +245,7 @@ int eal_shm_destroy(lmice_shm_t* shm)
 {
     if(shm->addr)
     {
-        UnmapViewOfFile((LPVOID)shm->addr);
+        UnmapViewOfFile(shm->addr);
         shm->addr = 0;
     }
 
@@ -269,9 +269,12 @@ int eal_shm_open(lmice_shm_t* shm, int mode)
 
 }
 
-int eal_shm_close(lmice_shm_t* shm)
+int eal_shm_close(shmfd_t fd, addr_t addr)
 {
-    return eal_shm_destroy(shm);
+    lmice_shm_t shm;
+    shm.addr = addr;
+    shm.fd = fd;
+    return eal_shm_destroy(&shm);
 }
 
 void eal_shm_zero(lmice_shm_t* shm)

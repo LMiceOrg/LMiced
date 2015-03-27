@@ -3,6 +3,33 @@
 #include <eal/lmice_trace.h>
 
 
+static void forceinline time_update(lm_time_param_t*   pm)
+{
+    lm_time_t*      pt = pm->pt;
+
+    /** update system time, every 32 times
+        update tick time when the tick_zero_time be set
+    */
+    if((pm->count % 32) == 0)
+    {
+        int64_t btime = pt->system_time;
+        get_system_time(&pt->system_time);
+        pt->tick_time += pt->tick_rate*(pt->system_time - btime);
+    }
+    else
+    {
+        pt->system_time += 10000LL*pm->wTimerDelay;
+
+        if(pt->tick_zero_time != 0)
+        {
+            pt->tick_time += pt->tick_rate * pm->wTimerDelay;
+        }
+    }
+
+    pm->count ++;
+}
+
+
 #if defined(_WIN32)
 
 /* 1-millisecond target resolution */
@@ -16,11 +43,11 @@ void CALLBACK time_thread_proc(UINT wTimerID, UINT msg,
     UNREFERENCED_PARAM(dw1);
     UNREFERENCED_PARAM(dw2);
 
-    time_param_t*   pm = (time_param_t*)dwUser;
+    lm_time_param_t*   pm = (lm_time_param_t*)dwUser;
     time_update(pm);
 }
 
-int stop_time_thread(time_param_t* pm)
+int stop_time_thread(lm_time_param_t* pm)
 {
     timeKillEvent(pm->wTimerID);
     timeEndPeriod(pm->wTimerRes);
@@ -31,7 +58,7 @@ int stop_time_thread(time_param_t* pm)
 
 }
 
-int create_time_thread(time_param_t* pm)
+int create_time_thread(lm_time_param_t* pm)
 {
 
     TIMECAPS tc;
@@ -51,10 +78,10 @@ int create_time_thread(time_param_t* pm)
     timeBeginPeriod(pm->wTimerRes);
 
     pm->wTimerID = timeSetEvent(
-                pm->wTimerDelay,                      // delay
-                pm->wTimerRes,                      // resolution (global variable)
-                time_thread_proc,                // callback function
-                (DWORD_PTR)pm,                      // user data
+                pm->wTimerDelay,                // delay
+                pm->wTimerRes,                  // resolution (global variable)
+                time_thread_proc,               // callback function
+                (DWORD_PTR)pm,                  // user data
                 TIME_PERIODIC );                // single timer event
     if(! pm->wTimerID)
         return 1;

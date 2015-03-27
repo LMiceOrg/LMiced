@@ -1,7 +1,6 @@
 #include "rtspace.h"
 
 #include "resource/resource_manage.h"
-#include "timer/timer_system_time.h"
 #include "trust/trust_manage.h"
 
 #include "eal/lmice_trace.h"
@@ -24,31 +23,20 @@ int main(int argc, char* argv[])
     {
 
         int ret = 0;
-        lm_resourece_t m_resource;
-        time_param_t m_time;
+        lm_server_t *m_server = NULL;
+        lm_res_param_t res_param;
         lm_trust_t m_trust;
-        lm_server_info_t *m_server;
 
-        /* 资源管理 */
-        memset(&m_resource, 0, sizeof(m_resource));
-        ret = create_server_resource(&m_resource);
+
+        /* 资源管理服务 */
+        ret = create_resource_service(&res_param);
         if(ret != 0)
         {
             lmice_critical_print("Create resource service failed[%d]\n", ret);
             return 1;
         }
 
-
-        /* 时间管理 */
-        memset(&m_time, 0, sizeof(m_time));
-        m_server = (lm_server_info_t*)((void*)(m_resource.shm.addr));
-        m_time.pt = &m_server->tm;
-        ret = create_time_thread(&m_time);
-        if(ret != 0)
-        {
-            lmice_critical_print("Create time service failed[%d]", ret);
-            return 1;
-        }
+        m_server = (lm_server_t*)((void*)(res_param.res_server.addr));
 
         /* 任务调度服务 */
 
@@ -63,11 +51,12 @@ int main(int argc, char* argv[])
             return 1;
         }
 
+        /* 节点间网络通讯服务 */
+
         getchar();
 
         stop_trust_thread(&m_trust);
-        stop_time_thread(&m_time);
-        destroy_server_resource(&m_resource);
+        destroy_resource_service(&res_param);
 
     }
 

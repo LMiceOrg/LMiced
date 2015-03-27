@@ -27,7 +27,7 @@ HEADERS += \
     rtspace.h \
 timer/timer_system_time.h   \
 resource/resource_manage.h \
-    trust/trust_manage.h
+trust/trust_manage.h
 #    system/system_environment.h \
 #    system/system_signal.h \
 #    system/system_environment_internal.h \
@@ -55,7 +55,15 @@ QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG -D_CRT_SECURE_NO_WARNINGS
 
 INCLUDEPATH += ../lib/jansson-2.7/build/include ../lib/sglib-1.0.4
 
+CONFIG(debug, debug|release) {
+message("debug mode")
 LIBS += -L../build/debug
+}
+
+CONFIG(release, debug|release) {
+LIBS += -L../build/release
+}
+
 LIBS += -lWinmm -lsrc -L../lib/jansson-2.7/build/lib/Release -ljansson
 }
 

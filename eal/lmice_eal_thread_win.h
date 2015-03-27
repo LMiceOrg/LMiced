@@ -3,6 +3,7 @@
 
 #include "lmice_eal_common.h"
 
+/* 32bit unsigned integer */
 typedef DWORD pid_t;
 
 pid_t forceinline pthread_self()

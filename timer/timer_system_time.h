@@ -18,7 +18,7 @@ struct lmice_time_s
 typedef struct lmice_time_s lm_time_t;
 
 #ifdef _WIN32
-struct time_param_s
+struct lmice_time_parameter_s
 {
     lm_time_t*  pt;
     MMRESULT    wTimerID;
@@ -33,7 +33,7 @@ struct time_param_s
 #include <signal.h>
 #include <time.h>
 
-struct time_param_s
+struct lmice_time_parameter_s
 {
     timer_t     timerid;
     sigset_t    mask;
@@ -46,36 +46,10 @@ struct time_param_s
 #else
 #error(No time_param implementation!)
 #endif
-typedef struct time_param_s time_param_t;
+typedef struct lmice_time_parameter_s lm_time_param_t;
 
-static void forceinline time_update(time_param_t*   pm)
-{
-    lm_time_t*      pt = pm->pt;
-
-    /** update system time, every 32 times
-        update tick time when the tick_zero_time be set
-    */
-    if((pm->count % 32) == 0)
-    {
-        int64_t btime = pt->system_time;
-        get_system_time(&pt->system_time);
-        pt->tick_time += pt->tick_rate*(pt->system_time - btime);
-    }
-    else
-    {
-        pt->system_time += 10000LL*pm->wTimerDelay;
-
-        if(pt->tick_zero_time != 0)
-        {
-            pt->tick_time += pt->tick_rate * pm->wTimerDelay;
-        }
-    }
-
-    pm->count ++;
-}
-
-int create_time_thread(time_param_t* pm);
-int stop_time_thread(time_param_t* pm);
+int create_time_thread(lm_time_param_t* pm);
+int stop_time_thread(lm_time_param_t* pm);
 
 #endif /** TIMER_SYSTEM_TIME_H */
 
