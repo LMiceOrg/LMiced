@@ -12,6 +12,9 @@
 
 int main(int argc, char* argv[])
 {
+    //printf("%u\n", sizeof(lm_worker_info_t));
+    //return 0;
+
     if(argc > 1)
     {
         if(strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0)
@@ -24,19 +27,19 @@ int main(int argc, char* argv[])
 
         int ret = 0;
         lm_server_t *m_server = NULL;
-        lm_res_param_t res_param;
+        lm_res_param_t* res_param = (lm_res_param_t*)malloc(sizeof(lm_res_param_t));
         lm_trust_t m_trust;
 
 
         /* 资源管理服务 */
-        ret = create_resource_service(&res_param);
+        ret = create_resource_service(res_param);
         if(ret != 0)
         {
             lmice_critical_print("Create resource service failed[%d]\n", ret);
             return 1;
         }
 
-        m_server = (lm_server_t*)((void*)(res_param.res_server.addr));
+        m_server = (lm_server_t*)((void*)(res_param->res_server.addr));
 
         /* 任务调度服务 */
 
@@ -56,7 +59,9 @@ int main(int argc, char* argv[])
         getchar();
 
         stop_trust_thread(&m_trust);
-        destroy_resource_service(&res_param);
+        destroy_resource_service(res_param);
+
+        free(res_param);
 
     }
 

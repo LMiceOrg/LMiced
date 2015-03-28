@@ -6,6 +6,11 @@
 /* 32bit unsigned integer */
 typedef DWORD pid_t;
 
+pid_t forceinline gettid()
+{
+    return GetCurrentThreadId();
+}
+
 pid_t forceinline pthread_self()
 {
     return GetCurrentThreadId();

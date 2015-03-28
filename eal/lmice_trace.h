@@ -68,27 +68,27 @@ extern lmice_trace_name_t lmice_trace_name[];
 
 #define LMICE_TRACE_COLOR_PRINT_PER_THREAD(type, format, ...) \
     do{ \
-    int ret;    \
-    size_t sz;  \
-    time_t tm;  \
-    char current_time[26];  \
-    char thread_name[32]; \
+    int trace_ret_i;    \
+    size_t trace_sz_i;  \
+    time_t trace_tm_i;  \
+    char trace_current_time_i[26];  \
+    char trace_thread_name_i[32]; \
     if(lmice_trace_debug_mode == 0 && \
         type == lmice_trace_debug)  \
         break; \
-    time(&tm);  \
-    ctime_r(&tm, current_time); \
-    current_time[24] = ' '; \
-    ret = pthread_getname_np(pthread_self(), thread_name, 32);  \
-    if(ret == 0) {   \
-        sz = strlen(thread_name);  \
-        if(sz == 0) ret = -1;  \
-        else ret = 0;   \
+    time(&trace_tm_i);  \
+    ctime_r(&trace_tm_i, trace_current_time_i); \
+    trace_current_time_i[24] = ' '; \
+    trace_ret_i = pthread_getname_np(pthread_self(), trace_thread_name_i, 32);  \
+    if(trace_ret_i == 0) {   \
+        trace_sz_i = strlen(trace_thread_name_i);  \
+        if(trace_sz_i == 0) trace_ret_i = -1;  \
+        else trace_ret_i = 0;   \
     }   \
-    printf(current_time); \
+    printf(trace_current_time_i); \
     LMICE_TRACE_COLOR_TAG3(type); \
-    if(ret == 0) {   \
-        printf(":[%d:%s]", getpid(), thread_name); \
+    if(trace_ret_i == 0) {   \
+        printf(":[%d:%s]", getpid(), trace_thread_name_i); \
         printf(format , ##__VA_ARGS__); \
         printf("\n"); \
     } else {    \

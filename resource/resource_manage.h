@@ -24,64 +24,121 @@
 #define DEFAULT_SHM_SIZE 4096 /** 4KB */
 #define DEFAULT_CLIENT_SIZE 200
 
+
+enum lmice_worker_state_e
+{
+    WORKER_RUNNING = 1,
+    WORKER_MODIFIED = 2,
+    WORKER_DEAD = 3
+};
+
+struct lmice_shm_resourece_s
+{
+    evtfd_t efd;
+    shmfd_t sfd;
+    addr_t  addr;
+};
+typedef struct lmice_shm_resourece_s lm_shm_res_t;
+
+struct lmice_action_s
+{
+    uint8_t state[8];
+};
+typedef struct lmice_action_s lm_action_t;
+
 /**
  * @brief The lmice_action_info_s struct
- * 用户事件
+ * 用户事件描述
  */
 struct lmice_action_info_s
 {
     uint32_t type;              //join
     uint32_t size;
-    int32_t state;
-    int32_t reserved;
     uint64_t inst_id;           // 实例编号
-    uint64_t act_ids[16];
+    uint64_t act_ids[8];
+    lm_action_t state;
 
 };
 typedef struct lmice_action_info_s lm_action_info_t;
 
+struct lmice_action_res_s
+{
+    evtfd_t efd;
+    lm_action_info_t *info;
+};
+typedef struct lmice_action_res_s lm_action_res_t;
+
+/**
+ * @brief The lmice_timer_s struct
+ * 定时器
+ */
+struct lmice_timer_s
+{
+    uint64_t count;             // 已完成触发数量
+    int64_t  begin;             // 开始时间
+};
+typedef struct lmice_timer_s lm_timer_t;
 
 /**
  * @brief The lmice_timer_info_s struct
- * 定时器事件
+ * 定时器描述,同时包括定时器运行时状态
  */
 struct lmice_timer_info_s
 {
     uint32_t type;              //ticker timer
-    int32_t state;              // 状态
-    int32_t size;               // 触发计数量
-    int32_t period;             // 周期长度
-    uint64_t inst_id;            // 实例编号
+    uint32_t size;               // 触发计数量
+    int64_t period;             // 周期长度
+    int64_t due;               // 预期开始时间, -1 立即开始, 0 下周期开始
+    uint64_t inst_id;           // 实例编号
 
-    // 状态量
-    uint64_t count;             // 已完成触发数量
-    int64_t begin;              // 开始时间
+
+    lm_timer_t  state;      //定时器状态
 };
 typedef struct lmice_timer_info_s lm_timer_info_t;
 
+struct lmice_timer_resource_s
+{
+    evtfd_t efd;
+    lm_timer_info_t *info;
+};
+typedef struct lmice_timer_resource_s lm_timer_res_t;
+
+/**
+ * @brief The lmice_message_s struct
+ * 消息
+ */
+struct lmice_message_s
+{
+    uint32_t lock;  //sync purpose
+    uint32_t size;  //blob size( bytes)
+    char blob[8];
+};
+typedef struct lmice_message_s lm_mesg_t;
+
 /**
  * @brief The lmice_message_info_s struct
- * 发布消息
+ * 消息描述
  */
-struct lmice_publish_message_info_s
+struct lmice_message_info_s
 {
-    uint32_t        type;   // publish
-    uint32_t        size;   //
-    int64_t         tick;   // message tick time
-    uint64_t inst_id;       // 实例编号 (决定了 响应事件与共享内存编号)
-    uint64_t type_id;       // 类型编号
+    uint32_t        type;       // publish; subscribe by instance or subscribe by type
+    uint32_t        size;       // size
+    int64_t         period;     // message publish  period tick, zero(0) means no period
+    uint64_t inst_id;           // 实例编号 (决定了 响应事件与共享内存编号)
+    uint64_t type_id;           // 类型编号
 };
-typedef struct lmice_publish_message_info_s lm_pubmsg_info_t;
+typedef struct lmice_message_info_s lm_mesg_info_t;
 
-struct lmice_subscribe_message_info_s
+/**
+ * @brief The lmice_message_resource_s struct
+ * 消息资源
+ */
+struct lmice_message_resource_s
 {
-    uint32_t type;  // subscribe by instance; subscribe by type
-    uint32_t reserved;
-    int64_t         tick;   // message tick time
-    uint64_t inst_id;       // 实例编号 (决定了 响应事件与共享内存编号)
-    uint64_t type_id;       // 类型编号
+    lm_shm_res_t res;
+    lm_mesg_info_t *info;
 };
-typedef struct lmice_subscribe_message_info_s lm_submsg_info_t;
+typedef struct lmice_message_resource_s lm_mesg_res_t;
 
 /**
  * @brief The lmice_worker_s struct
@@ -91,6 +148,8 @@ struct lmice_worker_s
 {
     uint32_t version;
     uint32_t size;
+    uint32_t state;
+    uint32_t reserved;
     /* next instance identity, zero(0) means no extra instance block */
     uint64_t next_id;
 
@@ -98,7 +157,7 @@ struct lmice_worker_s
     uint64_t inst_id;   // 实例编号
     uint64_t type_id;   // 类型编号
 
-    lm_pubmsg_info_t      pub[128];
+    lm_mesg_info_t      mesg[128];
     lm_timer_info_t     timer[128];
     lm_action_info_t    action[128];
 };
@@ -116,7 +175,7 @@ struct lmice_worker_info_s
 {
     /* The instance version*/
     uint32_t version;
-    uint32_t reserved;
+    uint32_t state; /* fine modified dead*/
 
     /* worker process id if equal to zero(0) means rtspace maintain the resource and thread-level instance */
     uint32_t process_id;
@@ -125,10 +184,20 @@ struct lmice_worker_info_s
     /* worker type identity, user defined */
     uint64_t type_id;
     /* worker instance identity */
-    uint64_t instance_id;
+    uint64_t inst_id;
 
 };
 typedef struct lmice_worker_info_s lm_worker_info_t;
+
+struct lmice_worker_resource_s
+{
+    lm_shm_res_t        res;
+    lm_worker_info_t*   info;
+    lm_mesg_res_t       mesg[128];
+    lm_timer_res_t      timer[128];
+    lm_action_res_t     action[128];
+};
+typedef struct lmice_worker_resource_s lm_worker_res_t;
 
 struct lmice_server_s
 {
@@ -150,36 +219,19 @@ struct lmice_server_s
 };
 typedef struct lmice_server_s lm_server_t;
 
-struct lmice_instance_resourece_s
-{
-    evtfd_t efd;
-    shmfd_t sfd;
-    addr_t  addr;
-};
-typedef struct lmice_instance_resourece_s lm_inst_res_t;
-
-
-struct lmice_worker_resource_s
-{
-    pid_t process_id;
-    pid_t thread_id;
-    lm_inst_res_t  res;
-};
-typedef struct lmice_worker_resource_s lm_worker_res_t;
-
 
 struct lmice_resource_parameter_s
 {
     lm_time_param_t tm_param;
-    lm_inst_res_t   res_server;
+    lm_shm_res_t   res_server;
     lm_worker_res_t res_worker[DEFAULT_CLIENT_SIZE];
 };
 typedef struct lmice_resource_parameter_s lm_res_param_t;
 
 
 
-int create_resource_service(lm_res_param_t* res);
-int destroy_resource_service(lm_res_param_t* res);
+int create_resource_service(lm_res_param_t* pm);
+int destroy_resource_service(lm_res_param_t* pm);
 
 #endif /** RESOURCE_MANAGE_H */
 

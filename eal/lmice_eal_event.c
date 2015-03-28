@@ -62,7 +62,7 @@ int eal_event_create(lmice_event_t* e)
         e->fd = 0;
         return 1;
     }
-    lmice_debug_print("event[%s] created as[%d]", e->name, (uint64_t)e->fd);
+    //lmice_debug_print("event[%s] created as[%d]", e->name, (uint64_t)e->fd);
     return 0;
 }
 
