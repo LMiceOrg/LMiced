@@ -5,7 +5,7 @@ CONFIG -= qt
 
 SOURCES += example1.cpp
 
-INCLUDEPATH += ../..  ../../../rtspace
+INCLUDEPATH += ../..   ../../../lib/sglib-1.0.4
 
 LIBS += -L../../../build/debug
 

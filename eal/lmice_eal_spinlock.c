@@ -26,7 +26,7 @@ int eal_spin_trylock(uint64_t* lock)
             sleep_times++;
             cnt = 0;
         }
-    }while(sleep_times > 10);
+    }while(sleep_times < 10);
 
     return ret;
 }

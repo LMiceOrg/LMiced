@@ -6,7 +6,8 @@ CONFIG -= qt
 SOURCES += main.c \
 timer/timer_system_time.c \
 resource/resouce_manage.c \
-    trust/trust_manage.c
+    trust/trust_manage.c \
+    schedule/action_schedule.c
 #    main.cpp \
 #    resource/resource_shm.cpp \
 #    resource/resource_meta_data.c \
@@ -27,7 +28,8 @@ HEADERS += \
     rtspace.h \
 timer/timer_system_time.h   \
 resource/resource_manage.h \
-trust/trust_manage.h
+trust/trust_manage.h \
+    schedule/action_schedule.h
 #    system/system_environment.h \
 #    system/system_signal.h \
 #    system/system_environment_internal.h \

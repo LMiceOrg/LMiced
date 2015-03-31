@@ -3,6 +3,127 @@
 #include <eal/lmice_trace.h>
 
 
+#define ACTIVE_TIMER_STATE(state) (state).value[0]=LM_TRIGGERED_STATE;
+#define ACTIVE_REFERENCED_ACTION(pact) (pact)->info->state.value[(pact)->pos] = LM_TRIGGERED_STATE
+#define CHECK_ACTION_STATE(pact) ( *(uint64_t*)&((pact)->info->state) == 0xFFFFFFFFFFFFFFFFULL )
+void forceinline timer_due_scheduler(int64_t now, lm_timer_res_t* tlist, lm_timer_res_t* active_list)
+{
+    size_t pos = 0;
+    lm_timer_res_t *res = NULL;
+    lm_ref_act_t *act = NULL;
+    do
+    {
+        for(pos = 0; pos < TIMER_LIST_NEXT_POS; ++pos)
+        {
+            res = tlist + pos;
+            if(res == NULL) break;
+            if(res->info == NULL)break;
+            if( now >= res->info->due)
+            {
+                /* Step.1 trigger timer */
+                ACTIVE_TIMER_STATE(res->info->timer.state);
+                eal_event_awake(res->worker->res.efd);
+
+                /* Step.2 check referenced action */
+                act = res->alist;
+                while(act != NULL)
+                {
+                    if(act->info == NULL) break;
+                    /* update referenced action */
+                    ACTIVE_REFERENCED_ACTION(act);
+
+                    if(CHECK_ACTION_STATE(act))
+                    {
+                        /* trigger referenced action */
+                        eal_event_awake(res->worker->res.efd);
+                    }
+                    act = act->next;
+                }
+
+                /* Step.3 update trigger counter */
+                res->info->timer.count ++;
+                res->info->timer.begin = now;
+
+                /* Step.4 check and move timer to active list */
+                /* size = 0 means infinite */
+                if(res->info->timer.count < res->info->size
+                        || res->info->size == 0)
+                {
+                    //ret = add_timer_to_tmlist(active_list, tlist+pos);
+                    append_timer_to_tmlist(active_list, res);
+                }
+
+                /* delete timer from due list*/
+                remove_timer_from_tmlist(tlist, res);
+            }
+
+        }
+        /* check next array */
+        tlist = (lm_timer_res_t *)tlist[TIMER_LIST_NEXT_POS].info;
+    } while(tlist != NULL);
+}
+
+void forceinline timer_scheduler(int64_t now, lm_timer_res_t * tlist)
+{
+    int64_t pos = 0;
+    lm_timer_res_t *res = NULL;
+    lm_ref_act_t *act = NULL;
+    do
+    {
+        for(pos = 0; pos < tlist[TIMER_LIST_NEXT_POS].active; ++pos)
+        {
+            res = tlist + pos;
+            if(res == NULL) break;
+            if(res->info == NULL)break;
+            if( now >= res->info->timer.begin + res->info->period)
+            {
+                /* Step.1 trigger timer */
+                ACTIVE_TIMER_STATE(res->info->timer.state);
+                eal_event_awake(res->worker->res.efd);
+
+
+                //lmice_debug_print("timer 0x%X triggered\n", res->info->inst_id);
+
+                /* Step.2 check referenced action */
+                act = res->alist;
+                while(act != NULL)
+                {
+                    if(act->info == NULL) break;
+                    /* trigger action */
+                    ACTIVE_REFERENCED_ACTION(act);
+                    if(CHECK_ACTION_STATE(act))
+                    {
+                        /* trigger referenced action */
+                        eal_event_awake(res->worker->res.efd);
+                    }
+
+                    act = act->next;
+
+                }
+
+                /* Step.3 update trigger counter */
+                res->info->timer.count ++;
+                res->info->timer.begin = now;
+
+                /* Step.4 check and remove on-shot and size <= count timer */
+                /* size = 0 means infinite */
+                if(res->info->timer.count >= res->info->size
+                        && res->info->size > 0)
+                {
+                    /* move timer list*/
+
+                    remove_timer_from_tmlist(tlist, res);
+                    lmice_debug_print("remove timer list [%u], [%d]\n", pos, tlist[127].active);
+                }
+            }
+
+        }
+        /* check next array */
+        tlist = (lm_timer_res_t *)tlist[TIMER_LIST_NEXT_POS].info;
+    } while(tlist != NULL);
+
+}
+
 static void forceinline time_update(lm_time_param_t*   pm)
 {
     lm_time_t*      pt = pm->pt;
@@ -43,27 +164,43 @@ void CALLBACK time_thread_proc(UINT wTimerID, UINT msg,
     UNREFERENCED_PARAM(dw1);
     UNREFERENCED_PARAM(dw2);
 
-    lm_time_param_t*   pm = (lm_time_param_t*)dwUser;
-    time_update(pm);
+    int64_t now = 0;
+    int64_t tick = 0;
+    lm_res_param_t *pm = (lm_res_param_t*)dwUser;
+
+    time_update(&pm->tm_param);
+
+    now = pm->tm_param.pt->system_time;
+    tick = pm->tm_param.pt->tick_time;
+
+    timer_due_scheduler(now, pm->timer_duelist, pm->timer_worklist);
+    timer_scheduler(now, pm->timer_worklist);
+
+    if(tick >0)
+    {
+        timer_due_scheduler(tick, pm->ticker_duelist, pm->ticker_worklist);
+        timer_scheduler(tick, pm->ticker_worklist);
+    }
+
 }
 
-int stop_time_thread(lm_time_param_t* pm)
+int stop_time_thread(lm_res_param_t *pm)
 {
-    timeKillEvent(pm->wTimerID);
-    timeEndPeriod(pm->wTimerRes);
+    timeKillEvent(pm->tm_param.wTimerID);
+    timeEndPeriod(pm->tm_param.wTimerRes);
 
-    pm->wTimerID = 0;
-    pm->wTimerRes = 0;
+    pm->tm_param.wTimerID = 0;
+    pm->tm_param.wTimerRes = 0;
     return 0;
 
 }
 
-int create_time_thread(lm_time_param_t* pm)
+int create_time_thread(lm_res_param_t *pm)
 {
 
     TIMECAPS tc;
 
-    pm->count = 0;
+    pm->tm_param.count = 0;
 
     if (timeGetDevCaps(&tc, sizeof(TIMECAPS)) != TIMERR_NOERROR)
     {
@@ -72,18 +209,18 @@ int create_time_thread(lm_time_param_t* pm)
         return 1;
     }
 
-    pm->wTimerRes = min(max(tc.wPeriodMin, MMTIME_RESOLUTION), tc.wPeriodMax);
-    pm->wTimerDelay = pm->wTimerRes;
+    pm->tm_param.wTimerRes = min(max(tc.wPeriodMin, MMTIME_RESOLUTION), tc.wPeriodMax);
+    pm->tm_param.wTimerDelay = pm->tm_param.wTimerRes;
 
-    timeBeginPeriod(pm->wTimerRes);
+    timeBeginPeriod(pm->tm_param.wTimerRes);
 
-    pm->wTimerID = timeSetEvent(
-                pm->wTimerDelay,                // delay
-                pm->wTimerRes,                  // resolution (global variable)
+    pm->tm_param.wTimerID = timeSetEvent(
+                pm->tm_param.wTimerDelay,                // delay
+                pm->tm_param.wTimerRes,                  // resolution (global variable)
                 time_thread_proc,               // callback function
                 (DWORD_PTR)pm,                  // user data
                 TIME_PERIODIC );                // single timer event
-    if(! pm->wTimerID)
+    if(! pm->tm_param.wTimerID)
         return 1;
     else
         return 0;

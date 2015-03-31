@@ -37,13 +37,10 @@ enum lmice_common
     FREE_RESOURCE = 0,
     MODIFY_RESOURCE = 1,
     WORK_RESOURCE = 2,
-    TICKER_TYPE = 1,
-    TIMER_TYPE = 2,
+
     CUSTOM_TYPE = 3,
     INFINITY = -1,
 
-    PUBLISH_RESOURCE_TYPE = 1,
-    SUBSCRIBE_RESOURCE_TYPE = 2,
     TIMER_EVENT_TYPE = 3,
     TICKER_EVENT_TYPE = 4,
     CUSTOM_EVENT_TYPE = 5,
@@ -132,8 +129,11 @@ public:
     //资源回收
     int join();
 
+    int commit();
+
     void printclients();
-    int create_shm_resource(uint64_t id, int size, lm_shm_res_t *res);
+    int create_shm_resource(uint64_t id, int size, lm_mesg_res_t *res);
+    int create_work_resource(uint64_t id, int size, lm_shm_res_t *res);
     int open_server_resource();
     int create_worker_resource();
 
@@ -144,9 +144,9 @@ public:
     pid_t       m_process_id;
     pid_t       m_thread_id;
 
-//    uint64_t    m_server_eid;
-//    lmice_client_info_t *m_client;
-//    lmice_event_t     m_server_evt;
+    //    uint64_t    m_server_eid;
+    //    lmice_client_info_t *m_client;
+    //    lmice_event_t     m_server_evt;
 
     lm_server_t *m_server;
     lm_worker_t * m_worker;
@@ -158,7 +158,12 @@ public:
 lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*16,0, 0,   CLIENT_SHMNAME};
 lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE*2, 0,0,  BOARD_SHMNAME};
 
-int lmice_spi::create_shm_resource(uint64_t id, int size, lm_shm_res_t *res)
+int lmice_spi::commit()
+{
+    m_worker->state = WORKER_MODIFIED;
+    return eal_event_awake(res_server.efd);
+}
+int lmice_spi::create_work_resource(uint64_t id, int size, lm_shm_res_t *res)
 {
     int ret = 0;
     lmice_event_t   evt;
@@ -191,6 +196,39 @@ int lmice_spi::create_shm_resource(uint64_t id, int size, lm_shm_res_t *res)
     return ret;
 }
 
+int lmice_spi::create_shm_resource(uint64_t id, int size, lm_mesg_res_t *res)
+{
+    int ret = 0;
+    //    lmice_event_t   evt;
+    lmice_shm_t     shm;
+    eal_shm_zero(&shm);
+    shm.size = size;
+    eal_shm_hash_name(id, shm.name);
+    ret = eal_shm_create(&shm);
+    if(ret != 0)
+    {
+        lmice_critical_print("create shm[%s] size(%d) failed[%d]\n", shm.name, shm.size, ret);
+        return ret;
+    }
+
+    //    eal_event_zero(&evt);
+    //    eal_event_hash_name(id, evt.name);
+    //    lmice_debug_print("create event[%s]", evt.name);
+    //    ret = eal_event_create(&evt);
+    //    if(ret != 0)
+    //    {
+    //        lmice_critical_print("create event failed[%d]\n", ret);
+    //        eal_shm_close(shm.fd, shm.addr);
+    //        return ret;
+    //    }
+
+    res->addr = shm.addr;
+    res->sfd = shm.fd;
+    //    res->efd = evt.fd;
+
+    return ret;
+}
+
 int lmice_spi::create_worker_resource()
 {
     int ret = 0;
@@ -198,9 +236,10 @@ int lmice_spi::create_worker_resource()
     m_inst_id = eal_hash64_fnv1a(&m_process_id, sizeof(m_process_id));
     m_inst_id = eal_hash64_fnv1a(&m_thread_id, sizeof(m_thread_id));
     m_inst_id = eal_hash64_more_fnv1a(CLIENT_SHMNAME, sizeof(CLIENT_SHMNAME)-1, m_inst_id);
-    ret = create_shm_resource(m_inst_id, DEFAULT_SHM_SIZE*16, &m_res->res);
+    ret = create_work_resource(m_inst_id, DEFAULT_SHM_SIZE*16, &m_res->res);
 
     m_worker = (lm_worker_t*)m_res->res.addr;
+    m_worker->lock = 0;
 
 
     return 0;
@@ -288,11 +327,11 @@ int lmice_spi::init()
     //注册客户端信息到平台
     do {
         lm_worker_info_t info={LMICE_VERSION,
-                                    WORKER_MODIFIED,
-                                    m_process_id,
-                                    m_thread_id,
-                                    m_type_id,
-                                    m_inst_id};
+                               WORKER_MODIFIED,
+                               m_process_id,
+                               m_thread_id,
+                               m_type_id,
+                               m_inst_id};
         //        info.version = LMICE_VERSION;
         //        info.size = DEFAULT_SHM_SIZE;
         //        info.process_id = m_pid;
@@ -313,7 +352,7 @@ int lmice_spi::init()
         eal_spin_unlock(&m_server->lock);
 
         //唤醒平台管理
-        eal_event_awake(res_server.efd);
+        //eal_event_awake(res_server.efd);
 
     } while(0);
 
@@ -360,9 +399,13 @@ int lmice_spi::register_publish(const char *type, const char *inst, int size, ui
     size_t i = 0;
     bool find = false;
     /*register*/
-    ret = eal_spin_trylock(&m_worker->lock);
+    lmice_debug_print("pub try lock %llu\n",  m_worker->lock);
+    ret = eal_spin_trylock(&(m_worker->lock));
     if(ret != 0)
+    {
+        lmice_debug_print("pub lock failed\n");
         return ret;
+    }
 
     for(i=0; i<128; ++i )
     {
@@ -372,17 +415,17 @@ int lmice_spi::register_publish(const char *type, const char *inst, int size, ui
         if(info->inst_id == 0)
         {
             find = true;
-
             break;
         }
     }
 
     eal_spin_unlock(&m_worker->lock);
 
+    lmice_debug_print ("pub check find\n");
     if(!find )
         return 1; //No Found
 
-    ret = create_shm_resource(inst_id, size, &res->res);
+    ret = create_shm_resource(inst_id, size, res);
     if(ret != 0)
     {
         lmice_critical_print("create shm resource failed\n");
@@ -395,7 +438,10 @@ int lmice_spi::register_publish(const char *type, const char *inst, int size, ui
     info->inst_id = inst_id;
     info->type_id = type_id;
 
+    *event_id = inst_id;
+
     //注册IPC信息,通知平台更新
+    lmice_debug_print("pub inst %llu\n", inst_id);
 
     return 0;
 
@@ -441,7 +487,7 @@ int lmice_spi::register_subscribe(const char* type, const char* inst, uint64_t *
     if(!find )
         return 1; //No Found
 
-    ret = create_shm_resource(inst_id, DEFAULT_SHM_SIZE, &res->res);
+    ret = create_shm_resource(inst_id, DEFAULT_SHM_SIZE, res);
     if(ret != 0)
     {
         lmice_critical_print("create shm resource failed\n");
@@ -454,20 +500,24 @@ int lmice_spi::register_subscribe(const char* type, const char* inst, uint64_t *
     info->inst_id = inst_id;
     info->type_id = type_id;
 
+    *event_id = inst_id;
+
     //注册IPC信息,通知平台更新
+    lmice_debug_print("sub inst %llu\n", inst_id);
+
     return 0;
 }
 
 int lmice_spi::register_tick_event(int period, int size, int due, uint64_t* event_id)
 {
     int ret = TICKER_TYPE;
-    uint64_t hval;
-    hval = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
-    hval = eal_hash64_more_fnv1a(&m_inst_id, sizeof(m_inst_id), hval);
-    hval = eal_hash64_more_fnv1a(&ret, sizeof(ret), hval);
-    hval = eal_hash64_more_fnv1a(&due, sizeof(due), hval);
-    hval = eal_hash64_more_fnv1a(&period, sizeof(period), hval);
-    hval = eal_hash64_more_fnv1a(&size, sizeof(size), hval);
+    uint64_t inst_id = 0;
+    inst_id = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
+    inst_id = eal_hash64_more_fnv1a(&m_inst_id, sizeof(m_inst_id), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&ret, sizeof(ret), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&due, sizeof(due), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&period, sizeof(period), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&size, sizeof(size), inst_id);
 
     //创建资源
     lm_timer_info_t *info = NULL;
@@ -498,26 +548,28 @@ int lmice_spi::register_tick_event(int period, int size, int due, uint64_t* even
         return 1; //No Found
 
 
-    //资源事件
-    lmice_event_t evt;
-    eal_event_zero(&evt);
-    eal_event_hash_name(hval, evt.name);
-    ret = eal_event_create(&evt);
-    if(ret != 0)
-    {
-        lmice_critical_print("create ticker event(%d[%d] - %d) failed(%d)\n", period, size, due, ret);
-        return ret;
-    }
+    //    //资源事件
+    //    lmice_event_t evt;
+    //    eal_event_zero(&evt);
+    //    eal_event_hash_name(hval, evt.name);
+    //    ret = eal_event_create(&evt);
+    //    if(ret != 0)
+    //    {
+    //        lmice_critical_print("create ticker event(%d[%d] - %d) failed(%d)\n", period, size, due, ret);
+    //        return ret;
+    //    }
 
-    res->efd = evt.fd;
+    //    res->efd = evt.fd;
 
     info->type = TICKER_TYPE;
     info->size = size;
     info->period = period;
     info->due = due;
-    info->inst_id = hval;
-    info->state.count = 0;
-    info->state.begin = 0;
+    info->inst_id = inst_id;
+    info->timer.count = 0;
+    info->timer.begin = 0;
+
+    *event_id = inst_id;
 
     //注册IPC信息,通知平台更新
     return 0;
@@ -526,13 +578,13 @@ int lmice_spi::register_tick_event(int period, int size, int due, uint64_t* even
 int lmice_spi::register_timer_event(int period, int size, int due, uint64_t* event_id)
 {
     int ret = TIMER_TYPE;
-    uint64_t hval;
-    hval = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
-    hval = eal_hash64_more_fnv1a(&m_process_id, sizeof(m_process_id), hval);
-    hval = eal_hash64_more_fnv1a(&ret, sizeof(ret), hval);
-    hval = eal_hash64_more_fnv1a(&due, sizeof(due), hval);
-    hval = eal_hash64_more_fnv1a(&period, sizeof(period), hval);
-    hval = eal_hash64_more_fnv1a(&size, sizeof(size), hval);
+    uint64_t inst_id;
+    inst_id = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
+    inst_id = eal_hash64_more_fnv1a(&m_process_id, sizeof(m_process_id), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&ret, sizeof(ret), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&due, sizeof(due), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&period, sizeof(period), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&size, sizeof(size), inst_id);
 
     //创建资源
     lm_timer_info_t *info = NULL;
@@ -563,42 +615,45 @@ int lmice_spi::register_timer_event(int period, int size, int due, uint64_t* eve
         return 1; //No Found
 
 
-    //资源事件
-    lmice_event_t evt;
-    eal_event_zero(&evt);
-    eal_event_hash_name(hval, evt.name);
-    ret = eal_event_create(&evt);
-    if(ret != 0)
-    {
-        lmice_critical_print("create timer event(%d[%d] - %d) failed(%d)\n", period, size, due, ret);
-        return ret;
-    }
+    //    //资源事件
+    //    lmice_event_t evt;
+    //    eal_event_zero(&evt);
+    //    eal_event_hash_name(inst_id, evt.name);
+    //    ret = eal_event_create(&evt);
+    //    if(ret != 0)
+    //    {
+    //        lmice_critical_print("create timer event(%d[%d] - %d) failed(%d)\n", period, size, due, ret);
+    //        return ret;
+    //    }
 
-    res->efd = evt.fd;
+    //    res->efd = evt.fd;
 
     info->type = TIMER_TYPE;
     info->size = size;
     info->period = period;
     info->due = due;
-    info->inst_id = hval;
-    info->state.count = 0;
-    info->state.begin = 0;
+    info->inst_id = inst_id;
+    info->timer.count = 0;
+    info->timer.begin = 0;
+
+    *event_id = inst_id;
+
     return 0;
 }
 
 int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t *event_id)
 {
     int ret = CUSTOM_TYPE;
-    uint64_t hval;
+    uint64_t inst_id;
     size_t sz;
 
-    hval = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
-    hval = eal_hash64_more_fnv1a(&m_process_id, sizeof(m_process_id), hval);
-    hval = eal_hash64_more_fnv1a(&ret, sizeof(ret), hval);
-    hval = eal_hash64_more_fnv1a(&size, sizeof(size), hval);
+    inst_id = eal_hash64_fnv1a(&m_session_id, sizeof(m_session_id));
+    inst_id = eal_hash64_more_fnv1a(&m_process_id, sizeof(m_process_id), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&ret, sizeof(ret), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&size, sizeof(size), inst_id);
     for(sz = 0; sz < size; ++sz)
     {
-        hval = eal_hash64_more_fnv1a((event_list+sz), sizeof(uint64_t), hval);
+        inst_id = eal_hash64_more_fnv1a((event_list+sz), sizeof(uint64_t), inst_id);
     }
 
     //创建资源
@@ -629,24 +684,27 @@ int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t
     if(!find )
         return 1; //No Found
 
-    //资源事件
-    lmice_event_t evt;
-    eal_event_zero(&evt);
-    eal_event_hash_name(hval, evt.name);
-    ret = eal_event_create(&evt);
-    if(ret != 0)
-    {
-        lmice_critical_print("create action event failed(%d)\n", ret);
-        return ret;
-    }
+    //    //资源事件
+    //    lmice_event_t evt;
+    //    eal_event_zero(&evt);
+    //    eal_event_hash_name(hval, evt.name);
+    //    ret = eal_event_create(&evt);
+    //    if(ret != 0)
+    //    {
+    //        lmice_critical_print("create action event failed(%d)\n", ret);
+    //        return ret;
+    //    }
 
-    res->efd = evt.fd;
+    //    res->efd = evt.fd;
     info->type = CUSTOM_EVENT_TYPE;
     info->size = size;
-    info->inst_id = hval;
+    info->inst_id = inst_id;
     for(i=0; i< size; ++i)
         info->act_ids[i] = *(event_list+i);
     memset(&info->state, 0, sizeof(info->state));
+
+
+    *event_id = inst_id;
 
     //注册IPC信息,通知平台更新
 
@@ -666,55 +724,20 @@ int lmice_spi::set_qos_level(int level)
 #include <vector>
 int lmice_spi::join()
 {
-    std::vector<evtfd_t> evts;
-    int i;
-    lm_mesg_res_t * mesg;
-    lm_timer_res_t * timer;
-    lm_action_res_t * action;
-
+    evtfd_t evts;
     if(m_res->res.efd != 0)
     {
-        evts.push_back(m_res->res.efd);
+        evts = m_res->res.efd;
     }
 
-    for(mesg = m_res->mesg, i=0; i<128; ++mesg, ++i )
-    {
-        if(mesg->res.efd != 0)
-        {
-            evts.push_back( mesg->res.efd );
-        }
-    }
-
-
-
-    for(timer = m_res->timer, i=0; i<128; ++timer, ++i )
-    {
-        if(timer->efd != 0)
-        {
-            evts.push_back( timer->efd );
-        }
-    }
-
-    for(action = m_res->action, i=0; i<128; ++action, ++i )
-    {
-        if(action->efd != 0)
-        {
-            evts.push_back( action->efd );
-        }
-    }
-
-    lmice_debug_print("total events=%llu", evts.size());
-    const HANDLE* ph = &evts[0];
     for(;;)
     {
-        DWORD hr = WaitForMultipleObjects( evts.size(),
-                                           ph,
-                                           FALSE,
-                                           INFINITE);
+        DWORD hr = WaitForSingleObject(evts,
+                                       INFINITE);
         switch(hr)
         {
         case WAIT_OBJECT_0:
-            return 0;
+            lmice_debug_print("server send event \n");
             break;
         case WAIT_TIMEOUT:
             return 1;
@@ -743,14 +766,14 @@ void lmice_spi::printclients()
     int i;
     int pos = 0;
 
-        int64_t begin = m_server->tm.system_time;
-        SYSTEMTIME st;
-        FileTimeToSystemTime((FILETIME*)&begin, &st);
+    int64_t begin = m_server->tm.system_time;
+    SYSTEMTIME st;
+    FileTimeToSystemTime((FILETIME*)&begin, &st);
 
-        printf("%llu\n%d-%d-%d %d:%d:%d %d\n",
-               begin,
-               st.wYear, st.wMonth, st.wDay,
-               st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+    printf("%llu\n%d-%d-%d %d:%d:%d %d\n",
+           begin,
+           st.wYear, st.wMonth, st.wDay,
+           st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 
     for(inst = &m_server->worker, i=0;i<MAX_CLIENT_COUNT; ++inst, ++i)
     {
@@ -772,25 +795,15 @@ void lmice_spi::printclients()
 /*****************************************************/
 /* Implementation */
 
-class beatheart_reporter :public lmice_event_callback
-{
-public:
-    ~beatheart_reporter()
-    {
-
-    }
-
-    int operator() (void* pdata)
-    {
-        return 0;
-    }
-};
-
 //建立中间件实例
 Thread lmice_spi spi;
 
 int main(int argc, char* argv[])
 {
+
+    UNREFERENCED_PARAM(argc);
+    UNREFERENCED_PARAM(argv);
+
     int ret;
 
     //    printf("sizeof(short)     = %d\n", sizeof(short));
@@ -827,17 +840,19 @@ int main(int argc, char* argv[])
     //注册资源发布与订阅
     uint64_t pe, se;
     spi.register_publish("beatheart", "172.26.4.153", 32, &pe);
+    spi.register_publish("beatheart2", "172.26.4.154", 32, &pe);
+    spi.register_publish("beatheart4", "172.26.4.154", 32, &pe);
     lmice_critical_print("begin subscribe");
     spi.register_subscribe("beatheart", ALL_INSTANCE, &se);
     lmice_critical_print("created publish subscribe");
     //注册仿真时间定时器
     uint64_t etick, ttick;
     lmice_critical_print("begin ticker");
-    spi.register_tick_event(30, INFINITE, TICK_NOW, &etick);
+    spi.register_tick_event(30, INFINITE, -1, &etick);
 
     //注册系统定时器
     lmice_critical_print("begin timer");
-    spi.register_timer_event(30, INFINITE, TIMER_NOW, &ttick);
+    spi.register_timer_event(5000000, 5, -1, &ttick);
 
     //注册事件状态机
     uint64_t evts[2], cevt;
@@ -852,6 +867,8 @@ int main(int argc, char* argv[])
 
     //用户工作
     //...
+    spi.commit();
+    //getchar();
 
     //清理中间件
     lmice_critical_print("begin join");

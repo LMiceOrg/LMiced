@@ -9,6 +9,7 @@
 
 #include <sglib.h>
 
+#include <string.h>
 #include <stdio.h>
 #include <errno.h>
 
@@ -16,25 +17,18 @@
 int create_server_resource(lm_shm_res_t *server);
 int destroy_server_resource(lm_shm_res_t* server);
 
+
 int forceinline open_action_resource(lm_action_res_t* act)
 {
     int ret = 0;
-    lmice_event_t evt;
-    eal_event_zero(&evt);
-    eal_event_hash_name(act->info->inst_id, evt.name);
-    ret = eal_event_open(&evt);
-    if(ret != 0)
-    {
-        lmice_critical_print("open event[%s] failed[%d]\n", evt.name, ret);
-    }
-     return ret;
+    act->active = 1;
+    return ret;
 }
 
 int forceinline close_action_resource(lm_action_res_t* act)
 {
     int ret = 0;
-    ret = eal_event_close(act->efd);
-    act->efd = 0;
+    act->active = 0;
     return ret;
 }
 
@@ -45,13 +39,13 @@ void forceinline maintain_worker_action_resource(lm_worker_res_t* worker)
     for(i=0; i< 128; ++i)
     {
         act = worker->action +i;
-        if(act->efd == 0
+        if(act->active == 0
                 && act->info->inst_id == 0)
         {
             /* this is an empty timer, worker never use it */
             continue;
         }
-        else if(act->efd != 0
+        else if(act->active != 0
                 && act->info->inst_id == 0)
         {
             /* the message is destroyed at worker side */
@@ -59,7 +53,7 @@ void forceinline maintain_worker_action_resource(lm_worker_res_t* worker)
             close_action_resource(act);
 
         }
-        else if(act->efd == 0
+        else if(act->active == 0
                 && act->info->inst_id != 0)
         {
             /* the timer is created at worker side */
@@ -74,52 +68,74 @@ void forceinline maintain_worker_action_resource(lm_worker_res_t* worker)
 int forceinline open_timer_resource(lm_timer_res_t* timer)
 {
     int ret = 0;
-    lmice_event_t evt;
-    eal_event_zero(&evt);
-    eal_event_hash_name(timer->info->inst_id, evt.name);
-    ret = eal_event_open(&evt);
-    if(ret != 0)
-    {
-        lmice_critical_print("open event[%s] failed[%d]\n", evt.name, ret);
-    }
-     return ret;
-}
-
-int forceinline close_timer_resource(lm_timer_res_t* timer)
-{
-    int ret = 0;
-    ret = eal_event_close(timer->efd);
-    timer->efd = 0;
+    timer->active = 1;
     return ret;
 }
 
-void forceinline maintain_worker_timer_resource(lm_worker_res_t* worker)
+
+int forceinline close_timer_resource(lm_timer_res_t* timer, lm_res_param_t* pm)
+{
+    lm_timer_info_t *info = NULL;
+
+    int ret = 0;
+    timer->active = 0;
+    info = timer->info;
+
+    if(info->type == TICKER_TYPE && info->due >= 0)
+        remove_timer_from_tmlist(pm->ticker_duelist, timer);
+    else if(info->type == TICKER_TYPE && info->due < 0)
+        remove_timer_from_tmlist(pm->ticker_worklist, timer);
+    else if(info->type == TIMER_TYPE && info->due >= 0)
+        remove_timer_from_tmlist(pm->timer_duelist, timer);
+    else if(info->type == TIMER_TYPE && info->due < 0)
+        remove_timer_from_tmlist(pm->timer_worklist, timer);
+
+    return ret;
+}
+
+void forceinline maintain_worker_timer_resource(lm_worker_res_t* worker, lm_res_param_t* pm)
 {
     size_t i=0;
     lm_timer_res_t *timer = NULL;
+    lm_timer_info_t *info = NULL;
     for(i=0; i< 128; ++i)
     {
         timer = worker->timer +i;
-        if(timer->efd == 0
+        info = timer->info;
+        if(timer->active == 0
                 && timer->info->inst_id == 0)
         {
             /* this is an empty timer, worker never use it */
             continue;
         }
-        else if(timer->efd != 0
+        else if(timer->active != 0
                 && timer->info->inst_id == 0)
         {
             /* the message is destroyed at worker side */
             /* close it at server side */
-            close_timer_resource(timer);
+            close_timer_resource(timer, pm);
+            lmice_debug_print("maintain_worker_timer_resource\n");
+
+
 
         }
-        else if(timer->efd == 0
+        else if(timer->active == 0
                 && timer->info->inst_id != 0)
         {
             /* the timer is created at worker side */
             /* open it at server side */
             open_timer_resource(timer);
+
+            if(info->type == TICKER_TYPE && info->due >= 0)
+                append_timer_to_tmlist(pm->ticker_duelist, timer);
+            else if(info->type == TICKER_TYPE && info->due < 0)
+                append_timer_to_tmlist(pm->ticker_worklist, timer);
+            else if(info->type == TIMER_TYPE && info->due >= 0)
+                append_timer_to_tmlist(pm->timer_duelist, timer);
+            else if(info->type == TIMER_TYPE && info->due < 0)
+                append_timer_to_tmlist(pm->timer_worklist, timer);
+
+
         }
         /* else the message synced at both server side and client side */
 
@@ -130,7 +146,6 @@ int forceinline open_message_resource(lm_mesg_res_t* mesg)
 {
     int ret = 0;
     lmice_shm_t shm;
-    lmice_event_t evt;
 
     eal_shm_zero(&shm);
     eal_shm_hash_name(mesg->info->inst_id, shm.name);
@@ -141,19 +156,8 @@ int forceinline open_message_resource(lm_mesg_res_t* mesg)
         return ret;
     }
 
-    eal_event_zero(&evt);
-    eal_event_hash_name(mesg->info->inst_id, evt.name);
-    ret = eal_event_open(&evt);
-    if(ret != 0)
-    {
-        lmice_critical_print("open event[%s] failed[%d]\n", evt.name, ret);
-        eal_shm_close(shm.fd, shm.addr);
-        return ret;
-    }
-
-    mesg->res.addr = shm.addr;
-    mesg->res.sfd = shm.fd;
-    mesg->res.efd = evt.fd;
+    mesg->addr = shm.addr;
+    mesg->sfd = shm.fd;
 
     return 0;
 }
@@ -162,28 +166,27 @@ int forceinline close_message_resource(lm_mesg_res_t* mesg)
 {
     int ret= 0;
 
-    ret = eal_shm_close(mesg->res.sfd, mesg->res.addr);
-    ret = eal_event_close(mesg->res.efd);
-
-    memset(&mesg->res, 0, sizeof(lm_shm_res_t));
+    ret = eal_shm_close(mesg->sfd, mesg->addr);
+    mesg->addr = 0;
+    mesg->sfd = 0;
 
     return ret;
 }
 
-void forceinline maintain_worker_message_resource(lm_worker_res_t* worker)
+void forceinline maintain_worker_message_resource(lm_worker_res_t* worker, lm_res_param_t* pm)
 {
     size_t i=0;
     lm_mesg_res_t *mesg = NULL;
     for(i=0; i< 128; ++i)
     {
         mesg = worker->mesg +i;
-        if(mesg->res.sfd == 0
+        if(mesg->addr == 0
                 && mesg->info->inst_id == 0)
         {
             /* this is an empty message, worker never use it */
             continue;
         }
-        else if(mesg->res.sfd != 0
+        else if(mesg->addr != 0
                 && mesg->info->inst_id == 0)
         {
             /* the message is destroyed at worker side */
@@ -191,12 +194,13 @@ void forceinline maintain_worker_message_resource(lm_worker_res_t* worker)
             close_message_resource(mesg);
 
         }
-        else if(mesg->res.sfd == 0
+        else if(mesg->addr == 0
                 && mesg->info->inst_id != 0)
         {
             /* the message is created at worker side */
             /* open it at server side */
             open_message_resource(mesg);
+
         }
         /* else the message synced at both server side and client side */
 
@@ -209,8 +213,18 @@ void forceinline init_worker_resource(lm_worker_res_t* worker)
     lm_worker_t* inst = (lm_worker_t*)worker->res.addr;
     for(i=0; i<128; ++i)
     {
+        worker->mesg[i].addr = 0;
         worker->mesg[i].info = &inst->mesg[i];
+    }
+    for(i=0; i<128; ++i)
+    {
+        worker->timer[i].active = 0;
         worker->timer[i].info = &inst->timer[i];
+        worker->timer[i].worker = worker;
+    }
+    for(i=0; i<128; ++i)
+    {
+        worker->action[i].active = 0;
         worker->action[i].info = &inst->action[i];
     }
 }
@@ -239,6 +253,7 @@ int forceinline open_worker_resource(lm_worker_res_t *worker)
         eal_shm_close(shm.fd, shm.addr);
         return ret;
     }
+
     worker->res.addr = shm.addr;
     worker->res.sfd = shm.fd;
     worker->res.efd = evt.fd;
@@ -246,11 +261,13 @@ int forceinline open_worker_resource(lm_worker_res_t *worker)
     return 0;
 }
 
-int forceinline close_worker_resource(lm_worker_res_t *worker)
+int forceinline close_worker_resource(lm_worker_res_t *worker, lm_res_param_t* pm)
 {
     int ret = 0;
     size_t i = 0;
     lm_mesg_res_t *mesg = NULL;
+    lm_timer_res_t *timer = NULL;
+    lm_action_res_t *act = NULL;
 
     /* close message, timer, action */
     for(i=0; i<128; ++i)
@@ -258,11 +275,20 @@ int forceinline close_worker_resource(lm_worker_res_t *worker)
         mesg = worker->mesg +i;
         close_message_resource(mesg);
     }
+    for(i=0; i<128; ++i)
+    {
+        timer = worker->timer +i;
+        close_timer_resource(timer, pm);
+    }
+    for(i=0; i<128; ++i)
+    {
+        act = worker->action +i;
+        close_action_resource(act);
+    }
 
     ret = eal_shm_close(worker->res.sfd, worker->res.addr);
-    ret = eal_event_close(worker->res.efd);
-
-    memset(&worker->res, 0, sizeof(lm_shm_res_t));
+    worker->res.sfd = 0;
+    worker->res.addr = 0;
     return ret;
 }
 
@@ -281,21 +307,22 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
         if(worker->info->state == WORKER_RUNNING)
             continue;
 
-        if(worker->res.sfd == 0
+        if(worker->res.addr == 0
                 && worker->info->inst_id == 0)
         {
             /* the worker is never used */
             continue;
         }
-        else if(worker->res.sfd != 0
+        else if(worker->res.addr != 0
                 && worker->info->inst_id == 0)
         {
             /* the worker is closed */
             /* so close it at server side */
-            close_worker_resource(worker);
+            lmice_debug_print("the worker is closed\n");
+            close_worker_resource(worker, pm);
             continue;
         }
-        else if(worker->res.sfd == 0
+        else if(worker->res.addr == 0
                 && worker->info->inst_id != 0)
         {
             /* a new worker is created */
@@ -308,9 +335,11 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
 
         if(worker->info->state == WORKER_MODIFIED)
         {
+            lmice_debug_print("sync worker[%d, %d] message\n", worker->info->process_id, worker->info->thread_id);
+
             /* sync message resource timer and action */
-            maintain_worker_message_resource(worker);
-            maintain_worker_timer_resource(worker);
+            maintain_worker_message_resource(worker, pm);
+            maintain_worker_timer_resource(worker, pm);
             maintain_worker_action_resource(worker);
             worker->info->state = WORKER_RUNNING;
         }
@@ -444,8 +473,7 @@ int create_resource_service(lm_res_param_t* pm)
 {
     int ret = 0;
     lm_shm_res_t *m_resource = &pm->res_server;
-    lm_time_param_t *m_time = &pm->tm_param;
-    lm_server_t *m_server = NULL;
+
 
     lmice_debug_print("enter create_resource_service\n");
 
@@ -458,18 +486,8 @@ int create_resource_service(lm_res_param_t* pm)
         return 1;
     }
     /* 初始化资源信息*/
-    printf("init server resource\n");
+    //printf("init server resource\n");
     init_server_resource(pm);
-
-    /* 启动时间维护服务 */
-    memset(m_time, 0, sizeof(lm_time_param_t));
-    m_server = (lm_server_t*)((void*)(m_resource->addr));
-    m_time->pt = &m_server->tm;
-    ret = create_time_thread(m_time);
-    if(ret != 0)
-    {
-        lmice_critical_print("Create time service failed[%d]", ret);
-    }
 
     /* 启动工作实例资源维护服务 */
     create_worker_maintain_thread(pm);
@@ -480,10 +498,7 @@ int create_resource_service(lm_res_param_t* pm)
 int destroy_resource_service(lm_res_param_t* pm)
 {
     int ret = 0;
-    lm_time_param_t *m_time = &pm->tm_param;
     lm_shm_res_t *m_resource = &pm->res_server;
-
-    ret = stop_time_thread(m_time);
     ret = destroy_server_resource(m_resource);
 
     return ret;

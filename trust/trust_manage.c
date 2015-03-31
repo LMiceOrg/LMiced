@@ -45,6 +45,8 @@ static forceinline void trust_resource_compute(lm_trust_t* pt)
                 err = GetLastError();
                 lmice_debug_print("process[%u] open failed[%u]\n", inst->process_id, err);
                 memset(inst, 0, sizeof(lm_worker_info_t));
+                inst->state = WORKER_DEAD;
+                eal_event_awake(pt->efd);
                 continue;
             }
             CloseHandle(hProcess);
@@ -61,6 +63,8 @@ static forceinline void trust_resource_compute(lm_trust_t* pt)
                 err = GetLastError();
                 lmice_debug_print("thread[%llu] open failed[%u]\n", inst->thread_id, err);
                 memset(inst, 0, sizeof(lm_worker_info_t));
+                inst->state = WORKER_DEAD;
+                eal_event_awake(pt->efd);
                 if(hProcess)
                     CloseHandle(hProcess);
                 continue;
