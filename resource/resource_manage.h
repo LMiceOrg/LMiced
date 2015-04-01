@@ -326,24 +326,24 @@ struct lmice_resource_parameter_s
     /* for scheduler time maintain */
     lm_time_param_t tm_param;
 
-    /* for scheduler */
-    lm_timer_res_t timer_duelist[TIMER_LIST_SIZE];
-    lm_timer_res_t ticker_duelist[TIMER_LIST_SIZE];
+    /* for timer-scheduler pointer-array */
+    lm_timer_res_t* timer_duelist[TIMER_LIST_SIZE];
+    lm_timer_res_t* ticker_duelist[TIMER_LIST_SIZE];
     /* <8 milli-second */
-    lm_timer_res_t timer_worklist1[TIMER_LIST_SIZE];
-    lm_timer_res_t ticker_worklist1[TIMER_LIST_SIZE];
+    lm_timer_res_t *timer_worklist1[TIMER_LIST_SIZE];
+    lm_timer_res_t *ticker_worklist1[TIMER_LIST_SIZE];
 
     /* <32 milli-second */
-    lm_timer_res_t timer_worklist2[TIMER_LIST_SIZE];
-    lm_timer_res_t ticker_worklist2[TIMER_LIST_SIZE];
+    lm_timer_res_t *timer_worklist2[TIMER_LIST_SIZE];
+    lm_timer_res_t *ticker_worklist2[TIMER_LIST_SIZE];
 
     /* <128 milli-second */
-    lm_timer_res_t timer_worklist3[TIMER_LIST_SIZE];
-    lm_timer_res_t ticker_worklist3[TIMER_LIST_SIZE];
+    lm_timer_res_t *timer_worklist3[TIMER_LIST_SIZE];
+    lm_timer_res_t *ticker_worklist3[TIMER_LIST_SIZE];
 
-    /* other milli-second */
-    lm_timer_res_t timer_worklist4[TIMER_LIST_SIZE];
-    lm_timer_res_t ticker_worklist4[TIMER_LIST_SIZE];
+    /* >= 128 milli-second */
+    lm_timer_res_t *timer_worklist4[TIMER_LIST_SIZE];
+    lm_timer_res_t *ticker_worklist4[TIMER_LIST_SIZE];
 
     lm_msglist_t pubmsg_list[128];
     lm_msglist_t submsg_list[128];
@@ -353,21 +353,22 @@ struct lmice_resource_parameter_s
 typedef struct lmice_resource_parameter_s lm_res_param_t;
 
 
-void forceinline get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t** tlist)
+void forceinline get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)
 {
-    if(val->info->type = TIMER_TYPE)
+    lm_timer_info_t *info = val->info;
+    if(info->type = TIMER_TYPE)
     {
-        if(val->info->due > 0)
+        if(info->due > 0)
         {
             *tlist = pm->timer_duelist;
         }
         else
         {
-            if(val->info->period < PERIOD_1)
+            if(info->period < PERIOD_1)
                 *tlist = pm->timer_worklist1;
-            else if(val->info->period < PERIOD_2)
+            else if(info->period < PERIOD_2)
                 *tlist = pm->timer_worklist2;
-            else if(val->info->period < PERIOD_3)
+            else if(info->period < PERIOD_3)
                 *tlist = pm->timer_worklist3;
             else
                 *tlist = pm->timer_worklist4;
@@ -375,17 +376,17 @@ void forceinline get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_
     }
     else
     {
-        if(val->info->due > 0)
+        if(info->due > 0)
         {
             *tlist = pm->ticker_duelist;
         }
         else
         {
-            if(val->info->period < PERIOD_1)
+            if(info->period < PERIOD_1)
                 *tlist = pm->ticker_worklist1;
-            else if(val->info->period < PERIOD_2)
+            else if(info->period < PERIOD_2)
                 *tlist = pm->ticker_worklist2;
-            else if(val->info->period < PERIOD_3)
+            else if(info->period < PERIOD_3)
                 *tlist = pm->ticker_worklist3;
             else
                 *tlist = pm->ticker_worklist4;
@@ -395,70 +396,87 @@ void forceinline get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_
 
 int forceinline remove_timer_from_tmlist(lm_res_param_t *pm, lm_timer_res_t* val)
 {
+    UNREFERENCED_PARAM(pm);
+    val->active = 0;
+    return 0;
+//    int64_t pos = 0;
+//    int ret = 1;
+//    lm_timer_res_t *res = NULL;
+//    lm_timer_res_t* cur = NULL;
+//    lm_timer_res_t* tlist = NULL;
 
-    int64_t pos = 0;
-    int ret = 1;
-    lm_timer_res_t *res = NULL;
-    lm_timer_res_t* cur = NULL;
-    lm_timer_res_t* tlist = NULL;
+//    get_timer_res_list(pm, val, &tlist);
+//    do
+//    {
+//        cur = tlist;
+//        for(pos = 0; pos < tlist[TIMER_LIST_NEXT_POS].active; ++pos)
+//        {
+//            res = cur+pos;
+//            if(res->info == val->info)
+//            {
+//                --tlist[TIMER_LIST_NEXT_POS].active;
+//                memmove(res, res+1, (tlist[TIMER_LIST_NEXT_POS].active - pos)*sizeof(lm_timer_res_t) );
+//                memset(cur+tlist[TIMER_LIST_NEXT_POS].active, 0, sizeof(lm_timer_res_t));
+//                ret = 0;
+//                break;
+//            }
+//        }
+//        if(ret == 0)
+//            break;
+//        res = cur+TIMER_LIST_NEXT_POS;
+//        cur=(lm_timer_res_t*) res->info;
+//    } while(cur != NULL);
+
+//    return ret;
+
+}
+
+int forceinline append_timer_to_tmlist(lm_res_param_t *pm, lm_timer_res_t* val)
+{
+
+    lm_timer_res_t **res = NULL;
+    lm_timer_res_t **cur = NULL;
+    lm_timer_res_t **tlist = NULL;
 
     get_timer_res_list(pm, val, &tlist);
     do
     {
         cur = tlist;
-        for(pos = 0; pos < tlist[TIMER_LIST_NEXT_POS].active; ++pos)
+        if(tlist[TIMER_LIST_NEXT_POS]->active < TIMER_LIST_NEXT_POS)
         {
-            res = cur+pos;
-            if(res->info == val->info)
-            {
-                --tlist[TIMER_LIST_NEXT_POS].active;
-                memmove(res, res+1, (tlist[TIMER_LIST_NEXT_POS].active - pos)*sizeof(lm_timer_res_t) );
-                memset(cur+tlist[TIMER_LIST_NEXT_POS].active, 0, sizeof(lm_timer_res_t));
-                ret = 0;
-                break;
-            }
-        }
-        if(ret == 0)
-            break;
-        res = cur+TIMER_LIST_NEXT_POS;
-        cur=(lm_timer_res_t*) res->info;
-    } while(cur != NULL);
-
-    return ret;
-
-}
-
-int forceinline append_timer_to_tmlist(, lm_timer_res_t* val)
-{
-
-    int ret = 1;
-    lm_timer_res_t *res = NULL;
-    lm_timer_res_t* cur = tlist;
-    lm_timer_res_t* tlist = NULL;
-    do
-    {
-        if(cur[TIMER_LIST_NEXT_POS].active < TIMER_LIST_NEXT_POS)
-        {
-            res = cur+cur[TIMER_LIST_NEXT_POS].active;
-            ++ cur[TIMER_LIST_NEXT_POS].active;
-            memcpy(res, val, sizeof(lm_timer_res_t));
-            ret = 0;
+            /* append timer */
+            res = &tlist[ tlist[TIMER_LIST_NEXT_POS]->active ];
+            *res = val;
+            ++ tlist[TIMER_LIST_NEXT_POS]->active;
             break;
         }
-        tlist = tlist + TIMER_LIST_NEXT_POS;
-        cur =(lm_timer_res_t*) tlist[TIMER_LIST_NEXT_POS].info;
-    } while(cur != NULL);
 
-    if(ret != 0)
-    {
-        cur = (lm_timer_res_t*)malloc(sizeof(lm_timer_res_t)*128);
-        memset(cur, 0, sizeof(lm_timer_res_t)*TIMER_LIST_SIZE);
+        tlist = (lm_timer_res_t**) tlist[TIMER_LIST_NEXT_POS]->info;
+        if(tlist == NULL)
+        {
+            /* create a new pointer-array */
+            tlist = (lm_timer_res_t**)malloc(sizeof(lm_timer_res_t*)*TIMER_LIST_SIZE);
+            memset(tlist, 0, sizeof(lm_timer_res_t*)*TIMER_LIST_SIZE);
 
-        tlist->info = (lm_timer_info_t*)((void *)cur);
-        tlist->alist =(lm_ref_act_t*)((void *)cur);
-        memcpy(cur, val, sizeof(lm_timer_res_t));
-        ++ cur[TIMER_LIST_NEXT_POS].active;
-    }
+            /* create the last pointer element (for control) */
+            tlist[TIMER_LIST_NEXT_POS]= (lm_timer_res_t*)malloc(sizeof(lm_timer_res_t));
+
+            /* reset control element value */
+            memset(tlist[TIMER_LIST_NEXT_POS], 0, sizeof(lm_timer_res_t) );
+
+            /* append timer */
+            res = &tlist[ tlist[TIMER_LIST_NEXT_POS]->active ];
+            *res = val;
+            ++ tlist[TIMER_LIST_NEXT_POS]->active;
+
+            /* link newlist to current list */
+            cur[TIMER_LIST_NEXT_POS]->info = (lm_timer_info_t*)((void *)tlist);
+            cur[TIMER_LIST_NEXT_POS]->alist =(lm_ref_act_t*)((void *)tlist);
+
+            break;
+        }
+    } while(tlist != NULL);
+
     return 0;
 
 }

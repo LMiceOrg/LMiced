@@ -75,22 +75,23 @@ int forceinline open_timer_resource(lm_timer_res_t* timer)
 
 int forceinline close_timer_resource(lm_timer_res_t* timer, lm_res_param_t* pm)
 {
-    lm_timer_info_t *info = NULL;
+    return remove_timer_from_tmlist(pm, timer);
+//    lm_timer_info_t *info = NULL;
 
-    int ret = 0;
-    timer->active = 0;
-    info = timer->info;
+//    int ret = 0;
+//    timer->active = 0;
+//    info = timer->info;
 
-    if(info->type == TICKER_TYPE && info->due >= 0)
-        remove_timer_from_tmlist(pm->ticker_duelist, timer);
-    else if(info->type == TICKER_TYPE && info->due < 0)
-        remove_timer_from_tmlist(pm->ticker_worklist, timer);
-    else if(info->type == TIMER_TYPE && info->due >= 0)
-        remove_timer_from_tmlist(pm->timer_duelist, timer);
-    else if(info->type == TIMER_TYPE && info->due < 0)
-        remove_timer_from_tmlist(pm->timer_worklist, timer);
-
-    return ret;
+//    if(info->type == TICKER_TYPE && info->due >= 0)
+//        remove_timer_from_tmlist(pm->ticker_duelist, timer);
+//    else if(info->type == TICKER_TYPE && info->due < 0)
+//        remove_timer_from_tmlist(pm->ticker_worklist, timer);
+//    else if(info->type == TIMER_TYPE && info->due >= 0)
+//        remove_timer_from_tmlist(pm->timer_duelist, timer);
+//    else if(info->type == TIMER_TYPE && info->due < 0)
+//        remove_timer_from_tmlist(pm->timer_worklist, timer);
+//
+//    return ret;
 }
 
 void forceinline maintain_worker_timer_resource(lm_worker_res_t* worker, lm_res_param_t* pm)
@@ -125,15 +126,16 @@ void forceinline maintain_worker_timer_resource(lm_worker_res_t* worker, lm_res_
             /* the timer is created at worker side */
             /* open it at server side */
             open_timer_resource(timer);
+            append_timer_to_tmlist(pm, timer);
 
-            if(info->type == TICKER_TYPE && info->due >= 0)
-                append_timer_to_tmlist(pm->ticker_duelist, timer);
-            else if(info->type == TICKER_TYPE && info->due < 0)
-                append_timer_to_tmlist(pm->ticker_worklist, timer);
-            else if(info->type == TIMER_TYPE && info->due >= 0)
-                append_timer_to_tmlist(pm->timer_duelist, timer);
-            else if(info->type == TIMER_TYPE && info->due < 0)
-                append_timer_to_tmlist(pm->timer_worklist, timer);
+//            if(info->type == TICKER_TYPE && info->due >= 0)
+//                append_timer_to_tmlist(pm->ticker_duelist, timer);
+//            else if(info->type == TICKER_TYPE && info->due < 0)
+//                append_timer_to_tmlist(pm->ticker_worklist, timer);
+//            else if(info->type == TIMER_TYPE && info->due >= 0)
+//                append_timer_to_tmlist(pm->timer_duelist, timer);
+//            else if(info->type == TIMER_TYPE && info->due < 0)
+//                append_timer_to_tmlist(pm->timer_worklist, timer);
 
 
         }

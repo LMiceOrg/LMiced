@@ -173,14 +173,14 @@ void CALLBACK time_thread_proc(UINT wTimerID, UINT msg,
     now = pm->tm_param.pt->system_time;
     tick = pm->tm_param.pt->tick_time;
 
-    timer_due_scheduler(now, pm->timer_duelist, pm->timer_worklist);
-    timer_scheduler(now, pm->timer_worklist);
+//    timer_due_scheduler(now, pm->timer_duelist, pm->timer_worklist);
+//    timer_scheduler(now, pm->timer_worklist);
 
-    if(tick >0)
-    {
-        timer_due_scheduler(tick, pm->ticker_duelist, pm->ticker_worklist);
-        timer_scheduler(tick, pm->ticker_worklist);
-    }
+//    if(tick >0)
+//    {
+//        timer_due_scheduler(tick, pm->ticker_duelist, pm->ticker_worklist);
+//        timer_scheduler(tick, pm->ticker_worklist);
+//    }
 
 }
 
