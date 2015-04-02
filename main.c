@@ -10,51 +10,71 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-typedef struct test_s
-{
-    int val;
-    int* p;
-} test;
+//typedef struct test_s
+//{
+//    int val;
+//    int* p;
+//} test;
+
+//void forceinline change(int***c, int**b)
+//{
+//    *c = b;
+//}
 
 int main(int argc, char* argv[])
 {
+    volatile int64_t a=0;
+    int64_t r = 2;
+    printf("a,r = [%u, %u]\n", a ,r);
+    r = InterlockedCompareExchange(&a, 1, 0);
+    printf("a,r = [%u, %u]\n", a ,r);
+    r=3;
+    r = InterlockedCompareExchange(&a, 1, 0);
+    printf("a,r = [%u, %u]\n", a ,r);
+    return 0;
 //    printf("%u,\t%u\n", sizeof(lm_res_param_t), sizeof(lm_worker_t));
 //    return 0;
 
-    test *p = (test*) malloc(sizeof(test));
-    test **b = (test**)malloc(10*sizeof(test*) );
-    test **a = NULL;
-    test** b2 = NULL;
-    memset(b, 0, sizeof(test*)*10);
-    b[9] = (test*)malloc(sizeof(test));
-    b[9]->val = 0;
-    printf("%x\n", b[9] );
-    {
-        b2 = (test**)malloc(10*sizeof(test*) );
-        memset(b2, 0, sizeof(test*)*10);
-        b[9]->p = (int*)b2;
+//    test *p = (test*) malloc(sizeof(test));
+//    test **b = (test**)malloc(10*sizeof(test*) );
+//    test **a = NULL;
+//    test** b2 = NULL;
+//    memset(b, 0, sizeof(test*)*10);
+//    b[9] = (test*)malloc(sizeof(test));
+//    b[9]->val = 0;
+//    printf("%x\n", b[9] );
+//    {
+//        b2 = (test**)malloc(10*sizeof(test*) );
+//        memset(b2, 0, sizeof(test*)*10);
+//        b[9]->p = (int*)b2;
 
 
-    }
-    printf("b1=%x\n", b);
-    for(int i=0; i<10; ++i)
-    {
-        printf("%x\n", &b[i]);
+//    }
+//    printf("b1=%x\n", b);
+//    for(int i=0; i<10; ++i)
+//    {
+//        printf("%x\n", &b[i]);
 
-    }
-    a = (test**) b[9]->p;
-    printf("b2=%x\n", b2);
-    if(a != NULL)
-    {
-        for(int j=0; j<10; ++j)
-            printf("\t%x\n", &a[j]);
-    }
+//    }
+//    a = (test**) b[9]->p;
+//    printf("b2=%x\n", b2);
+//    if(a != NULL)
+//    {
+//        for(int j=0; j<10; ++j)
+//            printf("\t%x\n", &a[j]);
+//        int j=0;
+//        printf("%\t\t%x\n", &a[++j]);
+//        printf("%\t\t%x\n", j);
+//    }
 
-    //b[0] = p;
-    a=&b[0];
-    *a = p;
-    printf("%x\t%x\t%x\n",b, b[0], p);
-    return 0;
+//    //b[0] = p;
+//    a=&b[0];
+//    *a = p;
+//    printf("%x\t%x\t%x\n",b, b[0], p);
+//    test **c=NULL;
+//    change(&c, b);
+//    printf("c,b = %x, %x\n", c, b);
+//    return 0;
 
     if(argc > 1)
     {

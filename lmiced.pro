@@ -53,6 +53,7 @@ win32-msvc* {
 message("LMiced - Windows MSVC")
 #QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
+QMAKE_CFLAGS_WARN_ON    = -W4
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG -D_CRT_SECURE_NO_WARNINGS
 
 INCLUDEPATH += ../lib/jansson-2.7/build/include ../lib/sglib-1.0.4

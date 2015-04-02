@@ -28,7 +28,7 @@ int create_schedule_service(lm_res_param_t* pm)
 int destroy_schedule_service(lm_res_param_t* pm)
 {
     int ret = 0;
-    lm_time_param_t *m_time = &pm->tm_param;
+//    lm_time_param_t *m_time = &pm->tm_param;
     ret = stop_time_thread(pm);
     return ret;
 }

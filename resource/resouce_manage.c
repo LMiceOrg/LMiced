@@ -65,33 +65,32 @@ void forceinline maintain_worker_action_resource(lm_worker_res_t* worker)
     }
 }
 
-int forceinline open_timer_resource(lm_timer_res_t* timer)
+int forceinline open_timer_resource(lm_res_param_t* pm, lm_timer_res_t* timer)
 {
     int ret = 0;
-    timer->active = 1;
+    lm_res_task_t task;
+
+    UNREFERENCED_PARAM(pm);
+
+    task.type = LM_RES_TASK_ADD_TIMER;
+    task.pval = timer;
+    //printf("%p, %p\n", task.pval, timer);
+    timer->active = LM_TIMER_RUNNING;
+    ret = set_resource_task(&task);
     return ret;
 }
 
 
-int forceinline close_timer_resource(lm_timer_res_t* timer, lm_res_param_t* pm)
+int forceinline close_timer_resource(lm_res_param_t* pm, lm_timer_res_t* timer)
 {
-    return remove_timer_from_tmlist(pm, timer);
-//    lm_timer_info_t *info = NULL;
+    lm_res_task_t task;
+    UNREFERENCED_PARAM(pm);
+    task.type = LM_RES_TASK_DEL_TIMER;
+    task.pval = timer;
+    timer->active = LM_TIMER_DELETE;
+    set_resource_task(&task);
+    return 0;
 
-//    int ret = 0;
-//    timer->active = 0;
-//    info = timer->info;
-
-//    if(info->type == TICKER_TYPE && info->due >= 0)
-//        remove_timer_from_tmlist(pm->ticker_duelist, timer);
-//    else if(info->type == TICKER_TYPE && info->due < 0)
-//        remove_timer_from_tmlist(pm->ticker_worklist, timer);
-//    else if(info->type == TIMER_TYPE && info->due >= 0)
-//        remove_timer_from_tmlist(pm->timer_duelist, timer);
-//    else if(info->type == TIMER_TYPE && info->due < 0)
-//        remove_timer_from_tmlist(pm->timer_worklist, timer);
-//
-//    return ret;
 }
 
 void forceinline maintain_worker_timer_resource(lm_worker_res_t* worker, lm_res_param_t* pm)
@@ -103,40 +102,30 @@ void forceinline maintain_worker_timer_resource(lm_worker_res_t* worker, lm_res_
     {
         timer = worker->timer +i;
         info = timer->info;
-        if(timer->active == 0
+        if(timer->active == LM_TIMER_NOTUSE
                 && timer->info->inst_id == 0)
         {
             /* this is an empty timer, worker never use it */
             continue;
         }
-        else if(timer->active != 0
+        else if(timer->active == LM_TIMER_RUNNING
                 && timer->info->inst_id == 0)
         {
             /* the message is destroyed at worker side */
             /* close it at server side */
-            close_timer_resource(timer, pm);
-            lmice_debug_print("maintain_worker_timer_resource\n");
+            close_timer_resource(pm, timer);
+            //lmice_debug_print("maintain_worker_timer_resource\n");
 
 
 
         }
-        else if(timer->active == 0
+        else if(timer->active == LM_TIMER_NOTUSE
                 && timer->info->inst_id != 0)
         {
             /* the timer is created at worker side */
             /* open it at server side */
-            open_timer_resource(timer);
-            append_timer_to_tmlist(pm, timer);
-
-//            if(info->type == TICKER_TYPE && info->due >= 0)
-//                append_timer_to_tmlist(pm->ticker_duelist, timer);
-//            else if(info->type == TICKER_TYPE && info->due < 0)
-//                append_timer_to_tmlist(pm->ticker_worklist, timer);
-//            else if(info->type == TIMER_TYPE && info->due >= 0)
-//                append_timer_to_tmlist(pm->timer_duelist, timer);
-//            else if(info->type == TIMER_TYPE && info->due < 0)
-//                append_timer_to_tmlist(pm->timer_worklist, timer);
-
+            //lmice_debug_print("a new timer[%lld]\n", timer->info->period);
+            open_timer_resource(pm, timer);
 
         }
         /* else the message synced at both server side and client side */
@@ -179,6 +168,9 @@ void forceinline maintain_worker_message_resource(lm_worker_res_t* worker, lm_re
 {
     size_t i=0;
     lm_mesg_res_t *mesg = NULL;
+
+    UNREFERENCED_PARAM(pm);
+
     for(i=0; i< 128; ++i)
     {
         mesg = worker->mesg +i;
@@ -220,7 +212,7 @@ void forceinline init_worker_resource(lm_worker_res_t* worker)
     }
     for(i=0; i<128; ++i)
     {
-        worker->timer[i].active = 0;
+        worker->timer[i].active = LM_TIMER_NOTUSE;
         worker->timer[i].info = &inst->timer[i];
         worker->timer[i].worker = worker;
     }
@@ -266,10 +258,13 @@ int forceinline open_worker_resource(lm_worker_res_t *worker)
 int forceinline close_worker_resource(lm_worker_res_t *worker, lm_res_param_t* pm)
 {
     int ret = 0;
+    lm_res_task_t task;
     size_t i = 0;
     lm_mesg_res_t *mesg = NULL;
     lm_timer_res_t *timer = NULL;
     lm_action_res_t *act = NULL;
+
+    UNREFERENCED_PARAM(pm);
 
     /* close message, timer, action */
     for(i=0; i<128; ++i)
@@ -280,7 +275,8 @@ int forceinline close_worker_resource(lm_worker_res_t *worker, lm_res_param_t* p
     for(i=0; i<128; ++i)
     {
         timer = worker->timer +i;
-        close_timer_resource(timer, pm);
+        timer->active = LM_TIMER_NOTUSE;
+
     }
     for(i=0; i<128; ++i)
     {
@@ -291,6 +287,35 @@ int forceinline close_worker_resource(lm_worker_res_t *worker, lm_res_param_t* p
     ret = eal_shm_close(worker->res.sfd, worker->res.addr);
     worker->res.sfd = 0;
     worker->res.addr = 0;
+
+    task.type = LM_RES_TASK_DEL_WORKER;
+    task.pval = worker;
+    ret = set_resource_task(&task);
+//    size_t i = 0;
+//    lm_mesg_res_t *mesg = NULL;
+//    lm_timer_res_t *timer = NULL;
+//    lm_action_res_t *act = NULL;
+
+//    /* close message, timer, action */
+//    for(i=0; i<128; ++i)
+//    {
+//        mesg = worker->mesg +i;
+//        close_message_resource(mesg);
+//    }
+//    for(i=0; i<128; ++i)
+//    {
+//        timer = worker->timer +i;
+//        close_timer_resource(pm, timer);
+//    }
+//    for(i=0; i<128; ++i)
+//    {
+//        act = worker->action +i;
+//        close_action_resource(act);
+//    }
+
+//    ret = eal_shm_close(worker->res.sfd, worker->res.addr);
+//    worker->res.sfd = 0;
+//    worker->res.addr = 0;
     return ret;
 }
 
@@ -299,8 +324,8 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
     size_t i = 0;
     lm_worker_res_t *worker = NULL;
     lmice_debug_print("call maintain worker resource\n");
-    lm_server_t* server = (lm_server_t*)pm->res_server.addr;
-    eal_spin_lock(&server->lock);
+//    lm_server_t* server = (lm_server_t*)pm->res_server.addr;
+    //eal_spin_lock(&server->lock);
     for(i=0; i<DEFAULT_CLIENT_SIZE; ++i)
     {
         worker = pm->res_worker +i;
@@ -337,7 +362,7 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
 
         if(worker->info->state == WORKER_MODIFIED)
         {
-            lmice_debug_print("sync worker[%d, %d] message\n", worker->info->process_id, worker->info->thread_id);
+            lmice_debug_print("sync worker[%d:0x%x] message\n", worker->info->process_id, worker->info->thread_id);
 
             /* sync message resource timer and action */
             maintain_worker_message_resource(worker, pm);
@@ -347,13 +372,13 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
         }
 
     }
-    eal_spin_unlock(&server->lock);
+    //eal_spin_unlock(&server->lock);
 }
 
 DWORD WINAPI worker_maintain_thread_proc( LPVOID lpParameter)
 {
     lm_res_param_t* pm = (lm_res_param_t*)lpParameter;
-    while(1)
+    for(;;)
     {
         //lmice_debug_print("call worker_maintain_thread_proc\n");
         DWORD code = WaitForSingleObject(pm->res_server.efd,
@@ -458,6 +483,15 @@ int destroy_server_resource(lm_shm_res_t *server)
     return ret;
 }
 
+void forceinline init_tmlist_resource(lm_timer_res_t** tlist)
+{
+    /* create the next-pos element (for control) */
+    tlist[TIMER_LIST_NEXT_POS]= (lm_timer_res_t*)malloc(sizeof(lm_timer_res_t));
+
+    /* reset control element value */
+    memset(tlist[TIMER_LIST_NEXT_POS], 0, sizeof(lm_timer_res_t) );
+}
+
 void forceinline init_server_resource(lm_res_param_t* pm)
 {
     size_t i = 0;
@@ -469,6 +503,17 @@ void forceinline init_server_resource(lm_res_param_t* pm)
     {
         pm->res_worker[i].info = &server->worker + i;
     }
+
+    init_tmlist_resource(pm->ticker_duelist);
+    init_tmlist_resource(pm->ticker_worklist1);
+    init_tmlist_resource(pm->ticker_worklist2);
+    init_tmlist_resource(pm->ticker_worklist3);
+    init_tmlist_resource(pm->ticker_worklist4);
+    init_tmlist_resource(pm->timer_duelist);
+    init_tmlist_resource(pm->timer_worklist1);
+    init_tmlist_resource(pm->timer_worklist2);
+    init_tmlist_resource(pm->timer_worklist3);
+    init_tmlist_resource(pm->timer_worklist4);
 }
 
 int create_resource_service(lm_res_param_t* pm)
@@ -550,3 +595,83 @@ int destroy_resource_service(lm_res_param_t* pm)
 //    fclose(fp);
 
 //}
+lm_res_task_t g_restask[128] = {0};
+uint64_t g_reslock = 0;
+int peek_resource_task(lm_res_task_t* task)
+{
+    int ret = 0;
+//    int64_t result = 1;
+    ret = eal_spin_trylock(&g_reslock);
+    if(ret !=0)
+        return ret;
+//    do {
+//        result = InterlockedCompareExchange64(&g_reslock, 1, 0);
+//    }while(result != 0);
+
+    if(g_restask[0].type == LM_RES_TASK_ADD_TIMER)
+    {
+        lm_timer_res_t* timer = g_restask[0].pval;
+        lmice_debug_print("peek[0] timer[%d] %lld\n", timer->info->type, timer->info->period);
+    }
+    if(g_restask[1].type == LM_RES_TASK_ADD_TIMER)
+    {
+        lm_timer_res_t* timer = g_restask[1].pval;
+        lmice_debug_print("peek[1] timer[%d] %lld\n", timer->info->type, timer->info->period);
+    }
+
+    if(g_restask[0].type != LM_RES_TASK_NOTUSE)
+    {
+        memcpy(task, g_restask, sizeof(lm_res_task_t));
+        memmove(g_restask, g_restask+1, 127*sizeof(lm_res_task_t));
+        g_restask[127].type = LM_RES_TASK_NOTUSE;
+
+
+        //lmice_debug_print("peek a new res task %d\n", task->type);
+    }
+
+    eal_spin_unlock(&g_reslock);
+    //g_reslock = 0;
+    return 0;
+}
+
+int set_resource_task(lm_res_task_t* task)
+{
+    int ret = 0;
+    int i;
+//    int64_t result = 1;
+//    do {
+//        result = InterlockedCompareExchange64(&g_reslock, 1, 0);
+//    }while(result != 0);
+    ret = eal_spin_trylock(&g_reslock);
+    if(ret !=0)
+        return ret;
+
+    ret = 1;
+    for(i= 0; i < 128; ++i)
+    {
+        if(g_restask[i].type == LM_RES_TASK_NOTUSE)
+        {
+            memcpy(g_restask+i, task, sizeof(lm_res_task_t));
+            ret = 0;
+            break;
+        }
+    }
+    eal_spin_unlock(&g_reslock);
+    //g_reslock = 0;
+    return ret;
+}
+
+int append_worker_to_res(lm_res_param_t* pm, lm_worker_res_t* worker)
+{
+    UNREFERENCED_PARAM(pm);
+    UNREFERENCED_PARAM(worker);
+    return 0;
+}
+
+int remove_worker_from_res(lm_res_param_t* pm, lm_worker_res_t* worker)
+{
+    int ret = 0;
+
+    ret = remove_timer_by_worker(pm, worker);
+    return ret;
+}

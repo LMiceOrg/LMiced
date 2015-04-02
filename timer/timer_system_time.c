@@ -6,19 +6,168 @@
 #define ACTIVE_TIMER_STATE(state) (state).value[0]=LM_TRIGGERED_STATE;
 #define ACTIVE_REFERENCED_ACTION(pact) (pact)->info->state.value[(pact)->pos] = LM_TRIGGERED_STATE
 #define CHECK_ACTION_STATE(pact) ( *(uint64_t*)&((pact)->info->state) == 0xFFFFFFFFFFFFFFFFULL )
-void forceinline timer_due_scheduler(int64_t now, lm_timer_res_t* tlist, lm_timer_res_t* active_list)
+
+
+
+void forceinline delete_timer_by_pos(int64_t pos, lm_timer_res_t *res, lm_timer_res_t **tlist)
 {
-    size_t pos = 0;
+    res->active = LM_TIMER_NOTUSE;
+    memmove(res, res+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
+    tlist[ tlist[TIMER_LIST_NEXT_POS]->active ] = NULL;
+    --tlist[TIMER_LIST_NEXT_POS]->active;
+}
+
+
+
+void forceinline get_tlist_by_remain(int64_t remain, lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)
+{
+    lm_timer_info_t *info = val->info;
+    if(info->type == TIMER_TYPE)
+    {
+
+        if(remain < PERIOD_1)
+            *tlist = pm->timer_worklist1;
+        else if(remain < PERIOD_2)
+            *tlist = pm->timer_worklist2;
+        else if(remain < PERIOD_3)
+            *tlist = pm->timer_worklist3;
+        else
+            *tlist = pm->timer_worklist4;
+
+    }
+    else
+    {
+
+        if(remain < PERIOD_1)
+            *tlist = pm->ticker_worklist1;
+        else if(remain < PERIOD_2)
+            *tlist = pm->ticker_worklist2;
+        else if(remain < PERIOD_3)
+            *tlist = pm->ticker_worklist3;
+        else
+            *tlist = pm->ticker_worklist4;
+
+    }
+}
+
+void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res_param_t*  pm)
+{
+    int64_t pos = 0;
+    int64_t remain = 0;
+    lm_timer_res_t *res = NULL;
+    lm_ref_act_t *act = NULL;
+    lm_timer_res_t **newlist = NULL;
+    do
+    {
+        for(pos = 1; pos <= tlist[TIMER_LIST_NEXT_POS]->active; ++pos)
+        {
+
+            res = tlist[pos];
+
+            if(res == NULL) break;
+            if(res->active != LM_TIMER_RUNNING ||
+                    res->info == NULL)
+            {
+                /* remove from list */
+                lmice_debug_print("remove[%lld] from list[res.active=%lld]\n",res->info->period, res->active);
+                delete_timer_by_pos(pos, res, tlist);
+                --pos;
+                continue;
+            }
+
+            if(res->info->timer.begin <=0) /* run at once */
+                remain = 0;
+            else
+                remain = res->info->timer.begin + res->info->period - now;
+
+            //lmice_debug_print("check timer[%lld][%p]\n", res->info->period, tlist);
+
+            if( remain <= 0)
+            {
+                res->info->timer.begin = now;
+                remain = res->info->period;
+
+                /* Step.1 check referenced action */
+                act = res->alist;
+                while(act != NULL)
+                {
+                    if(act->info == NULL) break;
+                    /* trigger action */
+                    ACTIVE_REFERENCED_ACTION(act);
+                    act = act->next;
+                }
+
+                /* Step.2 trigger timer */
+                lmice_debug_print("trigger timer[%u] [%lld]", res->info->type, res->info->period);
+                ACTIVE_TIMER_STATE(res->info->timer.state);
+                eal_event_awake(res->worker->res.efd);
+
+                //lmice_debug_print("timer 0x%X triggered\n", res->info->inst_id);
+
+                /* Step.3 update trigger counter */
+                res->info->timer.count ++;
+                res->info->timer.begin = now;
+
+                /* Step.4 check and remove on-shot and size <= count timer */
+                /* size = 0 means infinite */
+                if(res->info->size == 0 ||
+                        (res->info->timer.count >= res->info->size
+                        && res->info->size > 0) )
+                {
+                    /* remove from list */
+                    delete_timer_by_pos(pos, res, tlist);
+                    --pos;
+                    lmice_debug_print("remove timer list [%lld]\n", pos);
+                    /* go for-loop */
+                    continue;
+                }
+            }
+
+            /* move timer to proper list by remain*/
+            get_tlist_by_remain(remain, pm, res, &newlist);
+            if(tlist != newlist)
+            {
+                /* move it to newlist */
+                append_timer_to_tlist(res, newlist);
+                memmove(res, res+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
+                tlist[ tlist[TIMER_LIST_NEXT_POS]->active ] = NULL;
+                --tlist[TIMER_LIST_NEXT_POS]->active;
+                --pos;
+            }
+
+
+
+        } /* end-for */
+
+        /* get next array */
+        tlist = (lm_timer_res_t **)tlist[TIMER_LIST_NEXT_POS]->info;
+    } while(tlist != NULL);
+
+}
+
+void forceinline due_list_schedule(int64_t now, lm_timer_res_t** tlist, lm_res_param_t*  pm)
+{
+    int64_t pos = 0;
+    int64_t remain = 0;
     lm_timer_res_t *res = NULL;
     lm_ref_act_t *act = NULL;
     do
     {
-        for(pos = 0; pos < TIMER_LIST_NEXT_POS; ++pos)
+        for(pos = 1; pos <= tlist[TIMER_LIST_NEXT_POS]->active; ++pos)
         {
-            res = tlist + pos;
+            res = tlist[pos];
             if(res == NULL) break;
+            if(res->active != LM_TIMER_RUNNING)
+            {
+                /* remove from list */
+                delete_timer_by_pos(pos, res, tlist);
+                --pos;
+                continue;
+            }
+
             if(res->info == NULL)break;
-            if( now >= res->info->due)
+            remain = res->info->due  - now;
+            if( remain <= 0)
             {
                 /* Step.1 trigger timer */
                 ACTIVE_TIMER_STATE(res->info->timer.state);
@@ -41,7 +190,7 @@ void forceinline timer_due_scheduler(int64_t now, lm_timer_res_t* tlist, lm_time
                 }
 
                 /* Step.3 update trigger counter */
-                res->info->timer.count ++;
+                ++res->info->timer.count;
                 res->info->timer.begin = now;
 
                 /* Step.4 check and move timer to active list */
@@ -50,92 +199,37 @@ void forceinline timer_due_scheduler(int64_t now, lm_timer_res_t* tlist, lm_time
                         || res->info->size == 0)
                 {
                     //ret = add_timer_to_tmlist(active_list, tlist+pos);
-                    append_timer_to_tmlist(active_list, res);
+                    append_timer_to_res(pm, res);
                 }
 
                 /* delete timer from due list*/
-                remove_timer_from_tmlist(tlist, res);
-            }
+                delete_timer_by_pos(pos, res, tlist);
+                --pos;
 
-        }
+            }/* end-if :remain */
+
+        } /* end-for :pos*/
+
         /* check next array */
-        tlist = (lm_timer_res_t *)tlist[TIMER_LIST_NEXT_POS].info;
+        tlist = (lm_timer_res_t **)tlist[TIMER_LIST_NEXT_POS]->info;
     } while(tlist != NULL);
 }
 
-void forceinline timer_scheduler(int64_t now, lm_timer_res_t * tlist)
-{
-    int64_t pos = 0;
-    lm_timer_res_t *res = NULL;
-    lm_ref_act_t *act = NULL;
-    do
-    {
-        for(pos = 0; pos < tlist[TIMER_LIST_NEXT_POS].active; ++pos)
-        {
-            res = tlist + pos;
-            if(res == NULL) break;
-            if(res->info == NULL)break;
-            if( now >= res->info->timer.begin + res->info->period)
-            {
-                /* Step.1 trigger timer */
-                ACTIVE_TIMER_STATE(res->info->timer.state);
-                eal_event_awake(res->worker->res.efd);
-
-
-                //lmice_debug_print("timer 0x%X triggered\n", res->info->inst_id);
-
-                /* Step.2 check referenced action */
-                act = res->alist;
-                while(act != NULL)
-                {
-                    if(act->info == NULL) break;
-                    /* trigger action */
-                    ACTIVE_REFERENCED_ACTION(act);
-                    if(CHECK_ACTION_STATE(act))
-                    {
-                        /* trigger referenced action */
-                        eal_event_awake(res->worker->res.efd);
-                    }
-
-                    act = act->next;
-
-                }
-
-                /* Step.3 update trigger counter */
-                res->info->timer.count ++;
-                res->info->timer.begin = now;
-
-                /* Step.4 check and remove on-shot and size <= count timer */
-                /* size = 0 means infinite */
-                if(res->info->timer.count >= res->info->size
-                        && res->info->size > 0)
-                {
-                    /* move timer list*/
-
-                    remove_timer_from_tmlist(tlist, res);
-                    lmice_debug_print("remove timer list [%u], [%d]\n", pos, tlist[127].active);
-                }
-            }
-
-        }
-        /* check next array */
-        tlist = (lm_timer_res_t *)tlist[TIMER_LIST_NEXT_POS].info;
-    } while(tlist != NULL);
-
-}
-
-static void forceinline time_update(lm_time_param_t*   pm)
+static void forceinline update_time_and_tick(lm_time_param_t* pm)
 {
     lm_time_t*      pt = pm->pt;
 
-    /** update system time, every 32 times
+    /** update system time, every 32 milliseconds
         update tick time when the tick_zero_time be set
     */
-    if((pm->count % 32) == 0)
+    if((pm->count & 0x1f) == 0)
     {
         int64_t btime = pt->system_time;
         get_system_time(&pt->system_time);
-        pt->tick_time += pt->tick_rate*(pt->system_time - btime);
+        if(pt->tick_zero_time != 0)
+        {
+            pt->tick_time += pt->tick_rate*(pt->system_time - btime);
+        }
     }
     else
     {
@@ -148,6 +242,75 @@ static void forceinline time_update(lm_time_param_t*   pm)
     }
 
     pm->count ++;
+}
+
+static void forceinline schedule_timer_and_ticker(lm_res_param_t* pm)
+{
+    int64_t now = 0;
+    int64_t tick = 0;
+    lm_timer_res_t **tlist = NULL;
+
+    now = pm->tm_param.pt->system_time;
+    tick = pm->tm_param.pt->tick_time;
+
+    /* check due list */
+    tlist = pm->timer_duelist;
+    due_list_schedule(now, tlist, pm);
+
+    /* always check worklist1 */
+    tlist = pm->timer_worklist1;
+    timer_list_schedule(now, tlist, pm);
+
+    if( (pm->tm_param.count & 0xf) == 0)
+    {
+        tlist = pm->timer_worklist2;
+        timer_list_schedule(now, tlist, pm);
+    }
+
+    if( (pm->tm_param.count & 0x1f) == 0)
+    {
+
+        tlist = pm->timer_worklist3;
+        timer_list_schedule(now, tlist, pm);
+    }
+
+    if( (pm->tm_param.count & 0x7f) == 0)
+    {
+        tlist = pm->timer_worklist4;
+        //lmice_debug_print("worklist 4 [%lld]\n", tlist[0]->active);
+        timer_list_schedule(now, tlist, pm);
+
+
+    }
+
+    if(tick >0)
+    {
+        /* check due list */
+        tlist = pm->ticker_duelist;
+        due_list_schedule(tick, tlist, pm);
+
+        /* always check worklist1 */
+        tlist = pm->ticker_worklist1;
+        timer_list_schedule(tick, tlist, pm);
+
+        if( (pm->tm_param.count & 0xf) == 0)
+        {
+            tlist = pm->ticker_worklist2;
+            timer_list_schedule(tick, tlist, pm);
+        }
+
+        if( (pm->tm_param.count & 0x1f) == 0)
+        {
+            tlist = pm->ticker_worklist3;
+            timer_list_schedule(tick, tlist, pm);
+        }
+
+        if( (pm->tm_param.count & 0x7f) == 0)
+        {
+            tlist = pm->ticker_worklist4;
+            timer_list_schedule(tick, tlist, pm);
+        }
+    }
 }
 
 
@@ -164,23 +327,16 @@ void CALLBACK time_thread_proc(UINT wTimerID, UINT msg,
     UNREFERENCED_PARAM(dw1);
     UNREFERENCED_PARAM(dw2);
 
-    int64_t now = 0;
-    int64_t tick = 0;
     lm_res_param_t *pm = (lm_res_param_t*)dwUser;
 
-    time_update(&pm->tm_param);
+    /* update time and tick */
+    update_time_and_tick(&pm->tm_param);
 
-    now = pm->tm_param.pt->system_time;
-    tick = pm->tm_param.pt->tick_time;
+    /* resource task proc */
+    resource_task_proc(pm);
 
-//    timer_due_scheduler(now, pm->timer_duelist, pm->timer_worklist);
-//    timer_scheduler(now, pm->timer_worklist);
-
-//    if(tick >0)
-//    {
-//        timer_due_scheduler(tick, pm->ticker_duelist, pm->ticker_worklist);
-//        timer_scheduler(tick, pm->ticker_worklist);
-//    }
+    /* schedule timer and ticker */
+    schedule_timer_and_ticker(pm);
 
 }
 

@@ -28,7 +28,7 @@ typedef enum lmice_trace_type_e lmice_trace_type_t;
 struct lmice_trace_name_s {
     lmice_trace_type_t type;
     char name[16];
-    int color;
+    WORD color;
 };
 #define LMICE_TRACE_COLOR_TAG3(type) \
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), lmice_trace_name[type].color); \
@@ -92,11 +92,12 @@ extern lmice_trace_name_t lmice_trace_name[];
         printf(format , ##__VA_ARGS__); \
         printf("\n"); \
     } else {    \
-        printf(":[%d:0x%x]", getpid(), pthread_self()); \
+        printf(":[%d:0x%d]", getpid(), pthread_self()); \
         printf(format , ##__VA_ARGS__); \
         printf("\n"); \
     }   \
     }while (0);
+
 
 
 #else /** Posix */

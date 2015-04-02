@@ -568,6 +568,7 @@ int lmice_spi::register_tick_event(int period, int size, int due, uint64_t* even
     info->inst_id = inst_id;
     info->timer.count = 0;
     info->timer.begin = 0;
+    info->timer.state.value[0] = 0x0;
 
     *event_id = inst_id;
 
@@ -724,11 +725,15 @@ int lmice_spi::set_qos_level(int level)
 #include <vector>
 int lmice_spi::join()
 {
-    evtfd_t evts;
+    evtfd_t evts = NULL;
     if(m_res->res.efd != 0)
     {
         evts = m_res->res.efd;
     }
+
+    std::vector<lm_timer_info_t*> tlist;
+    size_t i=0;
+    lm_timer_info_t * info;
 
     for(;;)
     {
@@ -737,7 +742,18 @@ int lmice_spi::join()
         switch(hr)
         {
         case WAIT_OBJECT_0:
-            lmice_debug_print("server send event \n");
+            for(i=0; i< 128; ++i)
+            {
+                info = m_worker->timer +i;
+                if(info->inst_id == 0)
+                    continue;
+                if( info->timer.state.value[0] == 0xFF )
+                {
+                    info->timer.state.value[0] = 0x0;
+                    lmice_debug_print("server send timer[%lu] event [%lld] \n",i, info->period);
+                }
+            }
+
             break;
         case WAIT_TIMEOUT:
             return 1;
@@ -848,11 +864,11 @@ int main(int argc, char* argv[])
     //注册仿真时间定时器
     uint64_t etick, ttick;
     lmice_critical_print("begin ticker");
-    spi.register_tick_event(30, INFINITE, -1, &etick);
+    spi.register_tick_event(300000, 0, 0, &etick);
 
     //注册系统定时器
     lmice_critical_print("begin timer");
-    spi.register_timer_event(5000000, 5, -1, &ttick);
+    spi.register_timer_event(5000000, 50, 0, &ttick);
 
     //注册事件状态机
     uint64_t evts[2], cevt;

@@ -7,9 +7,9 @@ extern "C" {
 
 #include <stdint.h>
 
-int eal_spin_trylock(uint64_t* lock);
-int eal_spin_lock(uint64_t* lock);
-int eal_spin_unlock(uint64_t* lock);
+int eal_spin_trylock(volatile int64_t *lock);
+int eal_spin_lock(volatile int64_t* lock);
+int eal_spin_unlock(volatile int64_t *lock);
 
 #ifdef __cplusplus
 }

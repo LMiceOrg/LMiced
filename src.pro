@@ -67,6 +67,7 @@ QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 win32-msvc* {
 
 message("Windows MSVC")
+QMAKE_CFLAGS_WARN_ON    = -W4
 #QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
