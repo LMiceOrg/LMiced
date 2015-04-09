@@ -17,8 +17,11 @@
 #elif defined(_MSC_VER) /** MSC */
 
 #define     forceinline __inline
+#include <WinSock2.h>
+#include <Ws2tcpip.h>
 #define WIN32_MEAN_AND_LEAN
 #include <Windows.h>
+
 
 #else                   /** Other compiler */
 

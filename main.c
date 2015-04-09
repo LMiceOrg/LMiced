@@ -10,28 +10,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-//typedef struct test_s
-//{
-//    int val;
-//    int* p;
-//} test;
 
-//void forceinline change(int***c, int**b)
-//{
-//    *c = b;
-//}
 
 int main(int argc, char* argv[])
 {
-    volatile int64_t a=0;
-    int64_t r = 2;
-    printf("a,r = [%u, %u]\n", a ,r);
-    r = InterlockedCompareExchange(&a, 1, 0);
-    printf("a,r = [%u, %u]\n", a ,r);
-    r=3;
-    r = InterlockedCompareExchange(&a, 1, 0);
-    printf("a,r = [%u, %u]\n", a ,r);
+    SOCKADDR_STORAGE saRemote;
+    printf("size %d\n", sizeof(saRemote));
+    getchar();
     return 0;
+//    volatile int64_t a=0;
+//    int64_t r = 2;
+//    printf("a,r = [%u, %u]\n", a ,r);
+//    r = InterlockedCompareExchange(&a, 1, 0);
+//    printf("a,r = [%u, %u]\n", a ,r);
+//    r=3;
+//    r = InterlockedCompareExchange(&a, 1, 0);
+//    printf("a,r = [%u, %u]\n", a ,r);
+//    return 0;
 //    printf("%u,\t%u\n", sizeof(lm_res_param_t), sizeof(lm_worker_t));
 //    return 0;
 

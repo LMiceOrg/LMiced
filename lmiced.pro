@@ -29,7 +29,9 @@ HEADERS += \
 timer/timer_system_time.h   \
 resource/resource_manage.h \
 trust/trust_manage.h \
-    schedule/action_schedule.h
+    schedule/action_schedule.h \
+    net/net_manage.h \
+    net/net_manage_win.h
 #    system/system_environment.h \
 #    system/system_signal.h \
 #    system/system_environment_internal.h \
@@ -68,6 +70,7 @@ LIBS += -L../build/release
 }
 
 LIBS += -lWinmm -lsrc -L../lib/jansson-2.7/build/lib/Release -ljansson
+LIBS += -lws2_32 -lKernel32
 }
 
 macx-clang*{

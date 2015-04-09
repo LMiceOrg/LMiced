@@ -360,7 +360,8 @@ struct lmice_resource_parameter_s
     lm_msglist_t pubmsg_list[128];
     lm_msglist_t submsg_list[128];
 
-
+    /* 完成端口 */
+    HANDLE cp;
 };
 typedef struct lmice_resource_parameter_s lm_res_param_t;
 
