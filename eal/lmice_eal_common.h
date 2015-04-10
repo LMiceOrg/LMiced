@@ -7,9 +7,12 @@
 */
 #if defined(__GNUC__)   /** GCC */
 
-#define     forceinline __attribute__((always_inline))
+#define forceinline __attribute__((always_inline)) inline
+#include "sys/types.h"
 
 #if defined(__MINGW32__)
+#include <WinSock2.h>
+#include <Ws2tcpip.h>
 #define WIN32_MEAN_AND_LEAN
 #include <Windows.h>
 #endif
@@ -21,6 +24,9 @@
 #include <Ws2tcpip.h>
 #define WIN32_MEAN_AND_LEAN
 #include <Windows.h>
+
+/* 32bit unsigned integer */
+typedef DWORD pid_t;
 
 
 #else                   /** Other compiler */

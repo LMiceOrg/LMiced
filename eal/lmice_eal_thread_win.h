@@ -3,10 +3,7 @@
 
 #include "lmice_eal_common.h"
 
-/* 32bit unsigned integer */
-typedef DWORD pid_t;
-
-pid_t forceinline gettid()
+static pid_t forceinline gettid()
 {
     return GetCurrentThreadId();
 }

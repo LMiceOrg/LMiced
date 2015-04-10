@@ -21,9 +21,10 @@ Hash Size    Prime                       Offset
 
 uint64_t eal_hash64_fnv1a(const void* data, uint32_t len)
 {
+    uint32_t i=0;
     const unsigned char* dp = (const unsigned char*)data;
     uint64_t hval = 14695981039346656037ULL;
-    for(uint32_t i=0; i<len;++i)
+    for(i=0; i<len;++i)
     {
         hval ^= (uint64_t)*dp++;
 #if defined(_DEBUG)
@@ -39,10 +40,11 @@ uint64_t eal_hash64_fnv1a(const void* data, uint32_t len)
 
 uint32_t eal_hash32_fnv1a(const void *data, uint32_t len)
 {
+    uint32_t i=0;
     const unsigned char* dp = (const unsigned char*)data;
     uint32_t hval = 2166136261UL;
     /** xor the bottom with the current octet */
-    for(uint32_t i=0; i<len;++i)
+    for(i=0; i<len;++i)
     {
         hval ^= (uint32_t)*dp++;
 
@@ -60,9 +62,10 @@ uint32_t eal_hash32_fnv1a(const void *data, uint32_t len)
 
 uint64_t eal_hash64_more_fnv1a(const void *data, uint32_t size, uint64_t oldval)
 {
+    uint32_t i=0;
     const unsigned char* dp = (const unsigned char*)data;
     uint64_t hval = oldval;
-    for(uint32_t i=0; i<size;++i)
+    for(i=0; i<size;++i)
     {
         hval ^= (uint64_t)*dp++;
 #if defined(_DEBUG)

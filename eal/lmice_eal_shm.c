@@ -174,7 +174,7 @@ int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
     if(shm->fd == NULL)
     {
         err = GetLastError();
-        lmice_debug_print("eal_shm_create call OpenFileMapping(%s) return fd(%px) and size(%d) errno(%ld)", shm->name, shm->fd, shm->size, err);
+        lmice_debug_print("eal_shm_create call OpenFileMapping(%s) return fd(%px) and size(%d) err(%ld)", shm->name, shm->fd, shm->size, err);
 
         return err;
     }
@@ -189,7 +189,7 @@ int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
     if (shm->addr == 0)
     {
         err = GetLastError();
-        lmice_error_print("Could not map view of file (%d).\n", err);
+        lmice_error_print("Could not map view of file (%lu).\n", err);
 
         eal_shm_close(shm->fd, shm->addr);
 
@@ -216,7 +216,8 @@ int eal_shm_create(lmice_shm_t* shm)
 
     if (hMapFile == NULL)
     {
-        lmice_error_print("Could not create file mapping object (%d).\n", GetLastError());
+        DWORD err = GetLastError();
+        lmice_error_print("Could not create file mapping object (%lu).\n", err);
         return 1;
     }
 
@@ -259,7 +260,6 @@ int eal_shm_destroy(lmice_shm_t* shm)
 
 int eal_shm_open(lmice_shm_t* shm, int mode)
 {
-    int ret = 0;
 
     /** if shared memory address is already existing, then just return zero */
     if(shm->addr != 0 || shm->fd != 0)
@@ -297,8 +297,9 @@ int eal_shm_open_readwrite(lmice_shm_t* shm)
 static forceinline
 void hash_to_nameA(uint64_t hval, char* name)
 {
+    int i=0;
     const char* hex_list="0123456789ABCDEF";
-    for(int i=0; i<8; ++i)
+    for(i=0; i<8; ++i)
     {
         name[i*2] = hex_list[ *( (uint8_t*)&hval+i) >> 4];
         name[i*2+1] = hex_list[ *( (uint8_t*)&hval+i) & 0xf ];

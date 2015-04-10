@@ -16,7 +16,6 @@
 #include "eal/lmice_eal_thread.h"
 #include "eal/lmice_trace.h"
 
-#include <sglib.h>
 
 #include <stdint.h>
 
@@ -366,7 +365,7 @@ struct lmice_resource_parameter_s
 typedef struct lmice_resource_parameter_s lm_res_param_t;
 
 
-void forceinline get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)
+forceinline static void get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)
 {
     lm_timer_info_t *info = val->info;
     if(info->type == TIMER_TYPE)
@@ -409,7 +408,7 @@ void forceinline get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_
 }
 
 
-void forceinline append_timer_to_tlist(lm_timer_res_t *val, lm_timer_res_t **tlist)
+forceinline static void append_timer_to_tlist(lm_timer_res_t *val, lm_timer_res_t **tlist)
 {
     lm_timer_res_t **res = NULL;
     lm_timer_res_t **cur = NULL;
@@ -453,7 +452,7 @@ void forceinline append_timer_to_tlist(lm_timer_res_t *val, lm_timer_res_t **tli
     } while(tlist != NULL);
 }
 
-int forceinline remove_timer_from_list_by_worker(lm_timer_res_t **tlist, lm_worker_res_t* val)
+forceinline static int remove_timer_from_list_by_worker(lm_timer_res_t **tlist, lm_worker_res_t* val)
 {
     int64_t pos = 0;
     lm_timer_res_t *res = NULL;
@@ -479,7 +478,7 @@ int forceinline remove_timer_from_list_by_worker(lm_timer_res_t **tlist, lm_work
     return 0;
 }
 
-int forceinline remove_timer_by_worker(lm_res_param_t *pm, lm_worker_res_t* val)
+forceinline static int remove_timer_by_worker(lm_res_param_t *pm, lm_worker_res_t* val)
 {
     int ret = 0;
     lm_timer_res_t **tlist = NULL;
@@ -520,7 +519,7 @@ int forceinline remove_timer_by_worker(lm_res_param_t *pm, lm_worker_res_t* val)
     return ret;
 }
 
-int forceinline remove_timer_from_list(lm_timer_res_t **tlist, lm_timer_res_t* val)
+forceinline static int remove_timer_from_list(lm_timer_res_t **tlist, lm_timer_res_t* val)
 {
     int64_t pos = 0;
     lm_timer_res_t *res = NULL;
@@ -548,7 +547,7 @@ int forceinline remove_timer_from_list(lm_timer_res_t **tlist, lm_timer_res_t* v
     return 1;
 }
 
-int forceinline remove_timer_from_res(lm_res_param_t *pm, lm_timer_res_t* val)
+forceinline static int remove_timer_from_res(lm_res_param_t *pm, lm_timer_res_t* val)
 {
     int ret = 0;
     lm_timer_res_t **tlist = NULL;
@@ -607,7 +606,7 @@ int forceinline remove_timer_from_res(lm_res_param_t *pm, lm_timer_res_t* val)
     return ret;
 }
 
-int forceinline append_timer_to_res(lm_res_param_t *pm, lm_timer_res_t* val)
+forceinline static int append_timer_to_res(lm_res_param_t *pm, lm_timer_res_t* val)
 {
     lm_timer_res_t **tlist = NULL;
 
@@ -647,7 +646,7 @@ int set_resource_task(lm_res_task_t* task);
 int append_worker_to_res(lm_res_param_t* pm, lm_worker_res_t* worker);
 int remove_worker_from_res(lm_res_param_t* pm, lm_worker_res_t* worker);
 
-int forceinline resource_task_proc(lm_res_param_t* pm)
+forceinline static int resource_task_proc(lm_res_param_t* pm)
 {
     lm_res_task_t task;
     int ret = 0;

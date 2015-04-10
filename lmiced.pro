@@ -51,6 +51,28 @@ trust/trust_manage.h \
 #
 
 INCLUDEPATH += eal .
+
+mingw* {
+message("LMiced - Windows MinGW32")
+
+#QMAKE_CFLAGS += -std=c89
+QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG -D_CRT_SECURE_NO_WARNINGS
+
+
+CONFIG(debug, debug|release) {
+message("debug mode")
+LIBS += -L../build/debug
+}
+
+CONFIG(release, debug|release) {
+LIBS += -L../build/release
+}
+
+LIBS += -lWinmm -lsrc
+LIBS += -lws2_32 -lKernel32
+
+}
+
 win32-msvc* {
 message("LMiced - Windows MSVC")
 #QMAKE_CFLAGS += -std=c89

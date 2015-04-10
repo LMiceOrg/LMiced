@@ -7,8 +7,6 @@
 #include "resource_manage.h"
 #include "rtspace.h"
 
-#include <sglib.h>
-
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>

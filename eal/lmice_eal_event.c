@@ -6,8 +6,9 @@
 static forceinline
 void hash_to_nameA(uint64_t hval, char* name)
 {
+    int i=0;
     const char* hex_list="0123456789ABCDEF";
-    for(int i=0; i<8; ++i)
+    for(i=0; i<8; ++i)
     {
         name[i*2] = hex_list[ *( (uint8_t*)&hval+i) >> 4];
         name[i*2+1] = hex_list[ *( (uint8_t*)&hval+i) & 0xf ];
@@ -40,11 +41,11 @@ int eal_event_open(lmice_event_t* e)
     if(e->fd == NULL)
     {
         DWORD hr = GetLastError();
-        lmice_error_print("Open event[%s] failed[%u]", e->name, hr);
+        lmice_error_print("Open event[%s] failed[%lu]", e->name, hr);
         e->fd = 0;
         return 1;
     }
-    lmice_debug_print("event[%s] created as[%d]", e->name, (uint64_t)e->fd);
+    lmice_debug_print("event[%s] created as[%p]", e->name, e->fd);
     return 0;
 }
 
@@ -58,7 +59,7 @@ int eal_event_create(lmice_event_t* e)
     if(e->fd == NULL)
     {
         DWORD hr = GetLastError();
-        lmice_error_print("Create event[%s] failed[%u]", e->name, hr);
+        lmice_error_print("Create event[%s] failed[%lu]", e->name, hr);
         e->fd = 0;
         return 1;
     }

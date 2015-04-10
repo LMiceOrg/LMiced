@@ -4,6 +4,7 @@
 #include "trust/trust_manage.h"
 #include "schedule/action_schedule.h"
 
+#include "eal/lmice_eal_common.h"
 #include "eal/lmice_trace.h"
 
 #include <stdio.h>
