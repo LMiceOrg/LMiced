@@ -35,13 +35,13 @@ typedef struct lmice_io_data_s lm_io_data_t;
  * 结构体存储：记录单个套接字的数据，包括了套接字的变量及套接字的对应的客户端的地址。
  * 结构体作用：当服务器连接上客户端时，信息存储到该结构体中，知道客户端的地址以便于回访。
  **/
-struct lmice_handle_data_s
+struct eal_wsa_handle_s
 {
     int64_t state;
     SOCKET nfd;
     SOCKADDR_STORAGE client_addr;
 };
-typedef struct lmice_handle_data_s lm_handle_data_t;
+typedef struct eal_wsa_handle_s eal_wsa_handle;
 
 enum lmice_handle_data_e
 {
@@ -53,7 +53,7 @@ enum lmice_handle_data_e
 struct lmice_handle_data_head_s
 {
     volatile int64_t    lock;
-    lm_handle_data_t*   next;
+    eal_wsa_handle*   next;
 };
 
 typedef struct lmice_handle_data_head_s lm_hd_head_t;
@@ -63,22 +63,22 @@ struct lmice_net_parameter_s
 {
     int worker_count;
     HANDLE complete_port;
-    lm_handle_data_t *client_list;
+    eal_wsa_handle *client_list;
 };
 
 typedef struct lmice_net_parameter_s lm_net_param_t;
 
 
-void forceinline create_handle_data_list(lm_handle_data_t** cl)
+void forceinline create_handle_data_list(eal_wsa_handle** cl)
 {
-    *cl = (lm_handle_data_t*)malloc( sizeof(lm_handle_data_t)*LMICE_CLIENT_LIST_SIZE );
-    memset(*cl, 0, sizeof(lm_handle_data_t)*LMICE_CLIENT_LIST_SIZE );
+    *cl = (eal_wsa_handle*)malloc( sizeof(eal_wsa_handle)*LMICE_CLIENT_LIST_SIZE );
+    memset(*cl, 0, sizeof(eal_wsa_handle)*LMICE_CLIENT_LIST_SIZE );
 }
 
-void forceinline delete_handle_data_list(lm_handle_data_t* cl)
+void forceinline delete_handle_data_list(eal_wsa_handle* cl)
 {
     lm_hd_head_t* head = NULL;
-    lm_handle_data_t* next = NULL;
+    eal_wsa_handle* next = NULL;
     do {
         head = (lm_hd_head_t*)cl;
         next = head->next;
@@ -87,12 +87,12 @@ void forceinline delete_handle_data_list(lm_handle_data_t* cl)
     } while(cl != NULL);
 }
 
-int forceinline create_handle_data(lm_handle_data_t* cl, lm_handle_data_t** val)
+int forceinline create_handle_data(eal_wsa_handle* cl, eal_wsa_handle** val)
 {
 
 
     lm_hd_head_t* head = NULL;
-    lm_handle_data_t* cur = NULL;
+    eal_wsa_handle* cur = NULL;
     size_t i = 0;
 
     do {
@@ -114,10 +114,10 @@ int forceinline create_handle_data(lm_handle_data_t* cl, lm_handle_data_t** val)
     return 0;
 }
 
-int forceinline delete_handle_data(lm_handle_data_t* cl, const lm_handle_data_t* val)
+int forceinline delete_handle_data(eal_wsa_handle* cl, const eal_wsa_handle* val)
 {
     lm_hd_head_t* head = NULL;
-    lm_handle_data_t* cur = NULL;
+    eal_wsa_handle* cur = NULL;
     size_t i = 0;
     head = (lm_hd_head_t*)cl;
     do {
@@ -136,7 +136,7 @@ int forceinline delete_handle_data(lm_handle_data_t* cl, const lm_handle_data_t*
 }
 
 // 定义全局变量
-vector < lm_handle_data_t* > clientGroup;		// 记录客户端的向量组
+vector < eal_wsa_handle* > clientGroup;		// 记录客户端的向量组
 
 
 
@@ -186,7 +186,7 @@ enum lmice_net_tcp
     LMICE_TCP_SERVER_MODE
 };
 
-struct lmice_net_tcp_param_s
+struct eal_wsa_service_param_s
 {
     /* 0 client-mode, 1 server-mode */
     int mode;
@@ -199,19 +199,19 @@ struct lmice_net_tcp_param_s
     HANDLE  cp;
 
 };
-typedef struct lmice_net_tcp_param_s lm_net_tcp_param_t;
+typedef struct eal_wsa_service_param_s eal_wsa_service_param;
 
-void forceinline zero_net_tcp_param(lm_net_tcp_param_t* pm)
+void forceinline zero_net_tcp_param(eal_wsa_service_param* pm)
 {
-    memset(pm, 0, sizeof(lm_net_tcp_param_t));
+    memset(pm, 0, sizeof(eal_wsa_service_param));
 }
 
 DWORD WINAPI tcp_accept_thread_proc( LPVOID lpParameter)
 {
-    lm_net_tcp_param_t * pm = (lm_net_tcp_param_t *)lpParameter;
+    eal_wsa_service_param * pm = (eal_wsa_service_param *)lpParameter;
     int ret = 0;
 
-    lm_handle_data_t* PerHandleData;
+    eal_wsa_handle* PerHandleData;
 
     for(;;) {
         // 接收连接，并分配完成端，这儿可以用AcceptEx()
@@ -228,8 +228,8 @@ DWORD WINAPI tcp_accept_thread_proc( LPVOID lpParameter)
 
         // 创建用来和套接字关联的单句柄数据信息结构
         // 在堆中为这个PerHandleData申请指定大小的内存
-        PerHandleData = (lm_handle_data_t*)malloc(sizeof(lm_handle_data_t));
-        memset(PerHandleData, 0, sizeof(lm_handle_data_t));
+        PerHandleData = (eal_wsa_handle*)malloc(sizeof(eal_wsa_handle));
+        memset(PerHandleData, 0, sizeof(eal_wsa_handle));
         PerHandleData -> nfd = acceptSocket;
         memcpy (&PerHandleData -> client_addr, &saRemote, RemoteLen);
         // 将单个客户端数据指针放到客户端组中
@@ -261,7 +261,7 @@ DWORD WINAPI tcp_accept_thread_proc( LPVOID lpParameter)
     return 0;
 }
 
-int forceinline create_tcp_accept_thread(lm_net_tcp_param_t * pm)
+int forceinline create_tcp_accept_thread(eal_wsa_service_param * pm)
 {
     int ret = 0;
     HANDLE thd;
@@ -279,7 +279,7 @@ int forceinline create_tcp_accept_thread(lm_net_tcp_param_t * pm)
     return ret;
 }
 
-int forceinline create_tcp_service(lm_net_tcp_param_t * pm)
+int forceinline create_tcp_service(eal_wsa_service_param * pm)
 {
     int ret = 0;
     struct addrinfo *result = NULL;
@@ -434,7 +434,7 @@ int create_net_iocp()
     //    }
 
     // 建立流式套接字
-    lm_net_tcp_param_t pm;
+    eal_wsa_service_param pm;
     zero_net_tcp_param(&pm);
     memcpy(pm.bind_addr, "0.0.0.0", 7);
     memcpy(pm.bind_port, "30001", 5);
@@ -445,7 +445,7 @@ int create_net_iocp()
     cout << "本服务器已准备就绪，正在等待客户端的接入...\n";
 
     while(true){
-        lm_handle_data_t * PerHandleData = NULL;
+        eal_wsa_handle * PerHandleData = NULL;
         SOCKADDR_IN saRemote;
         int RemoteLen;
         SOCKET acceptSocket;
@@ -461,8 +461,8 @@ int create_net_iocp()
 
         // 创建用来和套接字关联的单句柄数据信息结构
         // 在堆中为这个PerHandleData申请指定大小的内存
-        PerHandleData = (lm_handle_data_t*)malloc(sizeof(lm_handle_data_t));
-        memset(PerHandleData, 0, sizeof(lm_handle_data_t));
+        PerHandleData = (eal_wsa_handle*)malloc(sizeof(eal_wsa_handle));
+        memset(PerHandleData, 0, sizeof(eal_wsa_handle));
         PerHandleData -> nfd = acceptSocket;
         memcpy (&PerHandleData -> client_addr, &saRemote, RemoteLen);
         clientGroup.push_back(PerHandleData);		// 将单个客户端数据指针放到客户端组中
@@ -497,7 +497,7 @@ DWORD WINAPI ServerWorkThread(LPVOID IpParam)
     HANDLE CompletionPort = (HANDLE)IpParam;
     DWORD BytesTransferred;
     LPOVERLAPPED IpOverlapped;
-    lm_handle_data_t* PerHandleData = NULL;
+    eal_wsa_handle* PerHandleData = NULL;
     lm_io_data_t* PerIoData = NULL;
     DWORD RecvBytes;
     DWORD Flags = 0;

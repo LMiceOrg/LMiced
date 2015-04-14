@@ -15,10 +15,11 @@
 
 int main(int argc, char* argv[])
 {
-    SOCKADDR_STORAGE saRemote;
-    printf("size %d\n", sizeof(saRemote));
-    getchar();
-    return 0;
+//    SOCKADDR_STORAGE saRemote;
+//    printf("size %d\n", sizeof(saRemote));
+//    getchar();
+//    return 0;
+
 //    volatile int64_t a=0;
 //    int64_t r = 2;
 //    printf("a,r = [%u, %u]\n", a ,r);

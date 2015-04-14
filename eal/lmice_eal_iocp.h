@@ -1,8 +1,10 @@
-#ifndef LMICE_EAL_IOCP_H
+﻿#ifndef LMICE_EAL_IOCP_H
 #define LMICE_EAL_IOCP_H
 
-#include "eal/lmice_trace.h"
-#include "eal/lmice_eal_common.h"
+#include "lmice_trace.h"
+#include "lmice_eal_common.h"
+
+#include <stdint.h>
 
 /**
     IOCP需要用到的动态链接库
@@ -10,31 +12,195 @@ pragma comment(lib, "Kernel32.lib")
 */
 
 /* iocp 操作指令 */
-enum lmice_iocp_operation_e
+enum eal_iocp_operation_e
 {
-    LMICE_TCP_RECV,
-    LMICE_TCP_SEND,
-    LMICE_MC_RECV,
-    LMICE_MC_SEND,
-    LMICE_UDP_RECV,
-    LMICE_UDP_SEND
+    EAL_IOCP_TCP_RECV,
+    EAL_IOCP_TCP_SEND,
+    EAL_IOCP_MC_RECV,
+    EAL_IOCP_MC_SEND,
+    EAL_IOCP_UDP_RECV,
+    EAL_IOCP_UDP_SEND
 };
 
-/* 临时记录IO数据 长度 */
-#define LMICE_MAX_NET_PACKAGE_SIZE  (64 * 1024)
+/* IO数据区 长度 */
+#define EAL_IOCP_BUFFER_SIZE  (64 * 1024 - 64 )
+/* 数组 长度 */
+#define EAL_IOCP_BUFFER_LENGTH 64
 
 /* iocp 数据结构 */
-struct lmice_iocp_data_s
+struct eal_iocp_data_s
 {
+    uint64_t inst_id;
     int operation;
-    OVERLAPPED overlapped;
     WSABUF data;
-    char buffer[ LMICE_MAX_NET_PACKAGE_SIZE ];
+    OVERLAPPED overlapped;
+    DWORD recv_bytes;
+    DWORD flags;
+
+    char buffer[EAL_IOCP_BUFFER_SIZE];
+};
+typedef struct eal_iocp_data_s eal_iocp_data;
+
+struct eal_iocp_data_list_s
+{
+    volatile int64_t lock;
+    struct eal_iocp_data_list_s* next;
+    eal_iocp_data data_array[EAL_IOCP_BUFFER_LENGTH];
+};
+typedef struct eal_iocp_data_list_s eal_iocp_data_list;
+
+forceinline static int eal_iocp_create_data_list(eal_iocp_data_list** pb)
+{
+    *pb = (eal_iocp_data_list*)malloc( sizeof(eal_iocp_data_list) );
+    if(*pb == NULL)
+        return -1;
+    memset(*pb, 0, sizeof(eal_iocp_data_list));
+    return 0;
+}
+
+forceinline static void eal_iocp_destroy_data_list(eal_iocp_data_list* pb)
+{
+    eal_iocp_data_list *next = NULL;
+    do {
+        next = pb->next;
+        free(pb);
+        pb = next;
+    } while(pb != NULL);
+}
+
+
+forceinline static int eal_iocp_append_data(eal_iocp_data_list* pb, uint64_t inst_id, eal_iocp_data** data)
+{
+    size_t i=0;
+    eal_iocp_data_list *next = NULL;
+    eal_iocp_data* cur = NULL;
+    do {
+
+        next = pb;
+        for(i=0; i< EAL_IOCP_BUFFER_LENGTH; ++i)
+        {
+            cur = &(pb->data_array[i]);
+            if(cur->inst_id == 0)
+            {
+                cur->inst_id = inst_id;
+                cur->data.len = EAL_IOCP_BUFFER_SIZE;
+                cur->data.buf = cur->buffer;
+                *data = cur;
+                return 0;
+            }
+        }
+        pb = next->next;
+    } while(pb != NULL);
+
+
+    if(pb == NULL)
+    {
+        eal_iocp_create_data_list(&pb);
+        next->next = pb;
+
+        cur = &(pb->data_array[0]);
+        cur->inst_id = inst_id;
+        cur->data.len = EAL_IOCP_BUFFER_SIZE;
+        cur->data.buf = cur->buffer;
+        *data = cur;
+
+    }
+
+    return 0;
+
+}
+
+forceinline static void eal_iocp_remove_data(eal_iocp_data* bt)
+{
+    bt->inst_id = 0;
+}
+
+
+struct eal_iocp_buffer_s
+{
+    uint64_t inst_id;
+    char buffer[EAL_IOCP_BUFFER_SIZE];
 
 };
-typedef struct lmice_iocp_data_s lm_iocp_dt;
+typedef struct eal_iocp_buffer_s eal_iocp_bt;
 
-static int forceinline create_iocp_handle(HANDLE* cp)
+struct eal_iocp_buffer_list_s
+{
+    volatile int64_t lock;
+    struct eal_iocp_buffer_list_s* next;
+    eal_iocp_bt buffer_array[EAL_IOCP_BUFFER_LENGTH];
+};
+typedef struct eal_iocp_buffer_list_s eal_iocp_buff_list;
+
+forceinline static int eal_create_iocp_buffer_list(eal_iocp_buff_list** pb)
+{
+    *pb = (eal_iocp_buff_list*)malloc( sizeof(eal_iocp_buff_list) );
+    if(*pb == NULL)
+        return -1;
+    memset(*pb, 0, sizeof(eal_iocp_buff_list));
+    return 0;
+}
+
+forceinline static void eal_destroy_iocp_buffer_list(eal_iocp_buff_list* pb)
+{
+    eal_iocp_buff_list *next = NULL;
+    do {
+        next = pb->next;
+        free(pb);
+        pb = next;
+    } while(pb != NULL);
+}
+
+forceinline static int eal_append_iocp_buffer(eal_iocp_buff_list* pb, uint64_t inst_id, char** buffer)
+{
+    size_t i=0;
+    eal_iocp_buff_list *next = NULL;
+    eal_iocp_bt* cur = NULL;
+    do {
+
+        next = pb;
+        for(i=0; i< EAL_IOCP_BUFFER_LENGTH; ++i)
+        {
+            cur = &(pb->buffer_array[i]);
+            if(cur->inst_id == 0)
+            {
+                cur->inst_id = inst_id;
+                *buffer = cur->buffer;
+                return 0;
+            }
+        }
+        pb = next->next;
+    } while(pb != NULL);
+
+
+    if(pb == NULL)
+    {
+        eal_create_iocp_buffer_list(&pb);
+        next->next = pb;
+
+        cur = &(pb->buffer_array[0]);
+        cur->inst_id = inst_id;
+        *buffer = cur->buffer;
+
+    }
+
+    return 0;
+
+}
+
+forceinline static void eal_remove_iocp_bt(eal_iocp_bt* bt)
+{
+    bt->inst_id = 0;
+}
+
+forceinline static void eal_remove_iocp_buffer(char* buffer)
+{
+    eal_iocp_bt* bt = (eal_iocp_bt*)(buffer - sizeof(bt->inst_id) );
+    bt->inst_id = 0;
+}
+
+
+forceinline static int eal_create_iocp_handle(HANDLE* cp)
 {
     int ret = 0;
     DWORD err = 0;
@@ -43,10 +209,22 @@ static int forceinline create_iocp_handle(HANDLE* cp)
     /* 检查创建IO内核对象失败*/
     if (NULL == *cp) {
         err = GetLastError();
-        lmice_error_print("CreateIoCompletionPort failed. Error[%u]\n", err);
+        lmice_error_print("CreateIoCompletionPort failed. Error[%ul]\n", err);
         ret = -1;
     }
     return ret;
+}
+
+typedef DWORD  (WINAPI *eal_iocp_worker_thread_type) (LPVOID ctx);
+forceinline static void eal_create_iocp_worker(int size, eal_iocp_worker_thread_type worker, HANDLE cp)
+{
+    HANDLE  tfd = NULL;
+    DWORD   tid = 0;
+    int     i   = 0;
+    for( i=0;i < size; ++i){
+        tfd = CreateThread(NULL, 0, worker, cp, 0, &tid);
+        CloseHandle(tfd);
+    }
 }
 
 #endif /** LMICE_EAL_IOCP_H */

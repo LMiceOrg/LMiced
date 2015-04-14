@@ -868,7 +868,7 @@ int main(int argc, char* argv[])
 
     //注册系统定时器
     lmice_critical_print("begin timer");
-    spi.register_timer_event(5000000, 50, 0, &ttick);
+    spi.register_timer_event(5000000, 2, 0, &ttick);
 
     //注册事件状态机
     uint64_t evts[2], cevt;

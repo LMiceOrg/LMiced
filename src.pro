@@ -12,7 +12,8 @@ SOURCES += lmice_core.c    \
     eal/lmice_eal_hash.c \
     eal/lmice_eal_spinlock.c \
     eal/lmice_eal_malloc.c \
-    eal/lmice_eal_event.c
+    eal/lmice_eal_event.c \
+    eal/lmice_eal_wsa.c
 
 OTHER_FILES += \
     ../doc/About_cn.txt \

@@ -7,16 +7,29 @@
 
 enum lmice_socket_data_e
 {
+    LMICE_SOCKET_DATA_NOTUSE = 0,
+    LMICE_SOCKET_DATA_USING = 1,
     LMICE_SOCKET_DATA_LIST_SIZE = 32
 };
 
+
+
 struct lmice_socket_data_s
 {
-    int64_t inst_id;
+    uint64_t inst_id;
+    int state;
     SOCKET nfd;
     SOCKADDR_STORAGE addr;
 };
 typedef struct lmice_socket_data_s lm_socket_dt;
+
+struct lmice_socket_head_s
+{
+    uint64_t inst_id;
+    uint64_t del_pos;
+    lm_socket_dt *next;
+};
+typedef struct lmice_socket_head_s lm_socket_ht;
 
 void forceinline create_socket_data_list(lm_socket_dt** cl)
 {
@@ -26,28 +39,28 @@ void forceinline create_socket_data_list(lm_socket_dt** cl)
 
 void forceinline delete_socket_data_list(lm_socket_dt* cl)
 {
-    lm_hd_head_t* head = NULL;
+    lm_socket_ht* head = NULL;
     lm_socket_dt* next = NULL;
     do {
-        head = (lm_hd_head_t*)cl;
+        head = (lm_socket_ht*)cl;
         next = head->next;
         free(cl);
         cl = next;
     } while(cl != NULL);
 }
 
-int forceinline create_socket_data(lm_handle_data_t* cl, lm_handle_data_t** val)
+int forceinline create_socket_data(lm_socket_dt* cl, lm_socket_dt** val)
 {
-    lm_hd_head_t* head = NULL;
-    lm_handle_data_t* cur = NULL;
+    lm_socket_ht* head = NULL;
+    lm_socket_dt* cur = NULL;
     size_t i = 0;
 
     do {
-        head = (lm_hd_head_t*)cl;
-        for( i= 1; i < LMICE_CLIENT_LIST_SIZE; ++i) {
-            *cur = cl+i;
-            if(cur->state == LMICE_HANDLE_DATA_NOTUSE) {
-                cur->state = LMICE_HANDLE_DATA_USING;
+        head = (lm_socket_ht*)cl;
+        for( i= 1; i < LMICE_SOCKET_DATA_LIST_SIZE; ++i) {
+            cur = &cl[i];
+            if(cur->state == LMICE_SOCKET_DATA_NOTUSE) {
+                cur->state = LMICE_SOCKET_DATA_USING;
                 *val = cur;
                 return 0;
             }
@@ -55,9 +68,15 @@ int forceinline create_socket_data(lm_handle_data_t* cl, lm_handle_data_t** val)
         cl = head->next;
     } while(cl != NULL);
 
-    create_socket_data_list(&cur);
-    head->next = cur;
-    *val = cur+1;
+    if(cl == NULL)
+    {
+        create_socket_data_list(&cl);
+        head->next = cl;
+
+        cur = &cl[1];
+        cl[1].state = LMICE_SOCKET_DATA_USING;
+        *val = &cl[1];
+    }
     return 0;
 }
 
@@ -68,11 +87,11 @@ int forceinline delete_socket_data(lm_handle_data_t* cl, const lm_handle_data_t*
     size_t i = 0;
     head = (lm_hd_head_t*)cl;
     do {
-        for( i= 1; i < LMICE_CLIENT_LIST_SIZE; ++i) {
+        for( i= 1; i < LMICE_SOCKET_DATA_LIST_SIZE; ++i) {
             *cur = cl+i;
-            if(cur->state == LMICE_HANDLE_DATA_USING &&
+            if(cur->state == LMICE_SOCKET_DATA_USING &&
                     cur == val) {
-                cur->state = LMICE_HANDLE_DATA_NOTUSE;
+                cur->state = LMICE_SOCKET_DATA_NOTUSE;
                 return 0;
             }
         }
