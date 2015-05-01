@@ -20,8 +20,7 @@ static int forceinline create_iocp_handle(HANDLE* cp)
     return ret;
 }
 
-int create_schedule_service(lm_res_param_t* pm)
-{
+int create_schedule_service(lm_res_param_t* pm) {
     int ret = 0;
     lm_time_param_t *m_time = &pm->tm_param;
     lm_server_t *m_server = NULL;
@@ -35,13 +34,10 @@ int create_schedule_service(lm_res_param_t* pm)
     m_server = (lm_server_t*)((void*)(m_resource->addr));
     m_time->pt = &m_server->tm;
     ret = create_time_thread(pm);
-    if(ret != 0)
-    {
+    if(ret != 0){
         lmice_critical_print("Create time service failed[%d]", ret);
     }
-
     return ret;
-
 }
 
 int destroy_schedule_service(lm_res_param_t* pm)

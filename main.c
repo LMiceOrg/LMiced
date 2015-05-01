@@ -82,7 +82,6 @@ int main(int argc, char* argv[])
     }
     else
     {
-
         int ret = 0;
         lm_server_t *m_server = NULL;
         lm_res_param_t* res_param = NULL;

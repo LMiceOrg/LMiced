@@ -7,7 +7,8 @@ SOURCES += main.c \
 timer/timer_system_time.c \
 resource/resouce_manage.c \
     trust/trust_manage.c \
-    schedule/action_schedule.c
+    schedule/action_schedule.c \
+    net/net_manage.c
 #    main.cpp \
 #    resource/resource_shm.cpp \
 #    resource/resource_meta_data.c \
@@ -98,8 +99,9 @@ LIBS += -lws2_32 -lKernel32
 macx-clang*{
 message("LMiced - MacX Darwin")
 
-QMAKE_CFLAGS += -std=c89 -funit-at-a-time -Wno-unused-function
-#QMAKE_CFLAGS += -Dinline=__inline
+QMAKE_CFLAGS += -std=c89
+QMAKE_CFLAGS += -funit-at-a-time -Wno-unused-function
+QMAKE_CFLAGS += -Dinline=__inline
 
 QMAKE_CXXFLAGS += -std=c++0x -Wshadow
 

@@ -320,8 +320,7 @@ static void forceinline schedule_timer_and_ticker(lm_res_param_t* pm)
 #define MMTIME_RESOLUTION 1
 
 void CALLBACK time_thread_proc(UINT wTimerID, UINT msg,
-                               DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
-{
+                               DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     UNREFERENCED_PARAM(wTimerID);
     UNREFERENCED_PARAM(msg);
     UNREFERENCED_PARAM(dw1);

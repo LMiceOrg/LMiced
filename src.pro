@@ -13,7 +13,7 @@ SOURCES += lmice_core.c    \
     eal/lmice_eal_spinlock.c \
     eal/lmice_eal_malloc.c \
     eal/lmice_eal_event.c \
-    eal/lmice_eal_wsa.c
+
 
 OTHER_FILES += \
     ../doc/About_cn.txt \
@@ -43,8 +43,6 @@ HEADERS += \
     eal/lmice_eal_time_win.h \
     eal/lmice_eal_shm_win.h \
     eal/lmice_eal_event.h \
-    eal/lmice_eal_iocp.h \
-    eal/lmice_eal_wsa.h \
     eal/lmice_eal_socket.h
 
 #Common config
@@ -63,8 +61,10 @@ INCLUDEPATH += ../lib/jansson/bin/include
 #LIBS += -L../lib/jansson/bin/lib
 #LIBS += -ljansson
 
-QMAKE_CFLAGS += -std=c89 -funit-at-a-time -Wno-unused-function
-DEFINES += inline=__inline__
+QMAKE_CFLAGS += -std=c89
+QMAKE_CFLAGS += -funit-at-a-time -Wno-unused-function -Wall
+QMAKE_CFLAGS += -Dinline=__inline__
+
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 }
 
@@ -80,6 +80,11 @@ QMAKE_LFLAGS_DEBUG += /MTd
 QMAKE_LFLAGS_DEBUG -= /MDd
 QMAKE_LFLAGS_RELEASE += /MT
 QMAKE_LFLAGS_RELEASE -= /MD
+
+SOURCES += eal/lmice_eal_wsa.c
+HEADERS += eal/lmice_eal_iocp.h \
+eal/lmice_eal_wsa.h
+
 }
 
 mingw* {

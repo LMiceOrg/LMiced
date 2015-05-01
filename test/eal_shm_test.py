@@ -21,6 +21,7 @@ shm_header = os.path.abspath(os.path.dirname( __file__ )  \
 
 ffi.cdef("""
 struct lmice_shm_s
+
 {
     int fd;
     int size;

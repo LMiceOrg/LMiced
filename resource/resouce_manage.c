@@ -594,7 +594,7 @@ int destroy_resource_service(lm_res_param_t* pm)
 
 //}
 lm_res_task_t g_restask[128] = {0};
-uint64_t g_reslock = 0;
+volatile int64_t g_reslock = 0;
 int peek_resource_task(lm_res_task_t* task)
 {
     int ret = 0;
@@ -631,31 +631,28 @@ int peek_resource_task(lm_res_task_t* task)
     //g_reslock = 0;
     return 0;
 }
-
+#define RES_TASKLIST_SIZE 128
 int set_resource_task(lm_res_task_t* task)
 {
     int ret = 0;
     int i;
-//    int64_t result = 1;
-//    do {
-//        result = InterlockedCompareExchange64(&g_reslock, 1, 0);
-//    }while(result != 0);
+    /* 锁定任务队列 */
     ret = eal_spin_trylock(&g_reslock);
     if(ret !=0)
         return ret;
 
     ret = 1;
-    for(i= 0; i < 128; ++i)
-    {
-        if(g_restask[i].type == LM_RES_TASK_NOTUSE)
-        {
+    /* 遍历任务队列 */
+    for(i= 0; i < RES_TASKLIST_SIZE; ++i) {
+        /* 判定任务队列当前位置是否可用 */
+        if(g_restask[i].type == LM_RES_TASK_NOTUSE) {
             memcpy(g_restask+i, task, sizeof(lm_res_task_t));
             ret = 0;
             break;
         }
     }
+    /* 解除任务队列锁定 */
     eal_spin_unlock(&g_reslock);
-    //g_reslock = 0;
     return ret;
 }
 

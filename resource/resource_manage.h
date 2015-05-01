@@ -28,7 +28,7 @@
 #define BOARD_SHMNAME   "82E0EE49-382C-40E7-AEA2-495999" /** 392D29 */
 #define DEFAULT_SHM_SIZE 4096 /** 4KB */
 #define DEFAULT_CLIENT_SIZE 200
-
+#define DEFAULT_RESOURCE_SIZE 128
 enum schedule_state
 {
     LM_PENDING_STATE = 0,
@@ -126,14 +126,12 @@ typedef struct lmice_timer_s lm_timer_t;
  */
 struct lmice_timer_info_s
 {
-    uint32_t type;              //ticker timer
-    uint32_t size;               // 触发计数量 1 --> one-shot  0 --> infinite
+    uint32_t type;              // ticker timer
+    uint32_t size;              // 触发计数量 1 --> one-shot  0 --> infinite
     int64_t period;             // 周期长度
-    int64_t due;               // 预期开始时间, -1 立即开始, 0 下周期开始
+    int64_t due;                // 预期开始时间, -1 立即开始, 0 下周期开始
     uint64_t inst_id;           // 实例编号
-
-
-    lm_timer_t  timer;      //定时器状态
+    lm_timer_t  timer;          // 定时器状态
 };
 typedef struct lmice_timer_info_s lm_timer_info_t;
 
@@ -628,15 +626,21 @@ enum lmice_resource_task_type_e
     LM_RES_TASK_NOTUSE = 0,
     LM_RES_TASK_ADD_TIMER,
     LM_RES_TASK_DEL_TIMER,
+    LM_RES_TASK_ADD_ACTION,
+    LM_RES_TASK_DEL_ACTION,
+    LM_RES_TASK_ADD_PUBMSG,
+    LM_RES_TASK_DEL_PUBMSG,
+    LM_RES_TASK_ADD_SUBMSG,
+    LM_RES_TASK_DEL_SUBMSG,
     LM_RES_TASK_ADD_WORKER,
     LM_RES_TASK_DEL_WORKER
 };
 
 struct lmice_resource_task_s
 {
-    int type;
-    uint64_t inst_id;
-    void* pval;
+    int type;           /* 任务类型 */
+    uint64_t inst_id;   /* 资源ID */
+    void* pval;         /* 指向资源地址 */
 };
 typedef struct lmice_resource_task_s lm_res_task_t;
 

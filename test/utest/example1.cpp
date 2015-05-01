@@ -832,13 +832,13 @@ int main(int argc, char* argv[])
     //            printf("sizeof(void *)    = %d\n", sizeof(void *));
     //    return 1;
 
-    ret = spi.init();
-
-    if(ret !=0)
-    {
-        lmice_critical_print("init failed[%d]", ret);
-        return 1;
-    }
+//中间件初始化
+ret = spi.init();
+if(ret !=0)
+{
+    lmice_critical_print("init failed[%d]", ret);
+    return 1;
+}
 
 
     if(argc > 1)
@@ -848,47 +848,51 @@ int main(int argc, char* argv[])
     }
 
 
-    ret = spi.join_session(1);
-    if(ret != 0)
-        return ret;
+//加入会话
+ret = spi.join_session(1);
+if(ret != 0)
+    return ret;
 
     lmice_critical_print("begin publish");
-    //注册资源发布与订阅
-    uint64_t pe, se;
-    spi.register_publish("beatheart", "172.26.4.153", 32, &pe);
-    spi.register_publish("beatheart2", "172.26.4.154", 32, &pe);
-    spi.register_publish("beatheart4", "172.26.4.154", 32, &pe);
-    lmice_critical_print("begin subscribe");
-    spi.register_subscribe("beatheart", ALL_INSTANCE, &se);
-    lmice_critical_print("created publish subscribe");
-    //注册仿真时间定时器
-    uint64_t etick, ttick;
-    lmice_critical_print("begin ticker");
-    spi.register_tick_event(300000, 0, 0, &etick);
+//注册资源发布与订阅
+uint64_t pe[3], se;
+spi.register_publish("my message 1", "spider-1", 32, &pe[0]);
+spi.register_publish("my message 2", "spider-1", 32, &pe[1]);
+spi.register_publish("another message 3", "spider-2", 32, &pe[2]);
 
-    //注册系统定时器
-    lmice_critical_print("begin timer");
-    spi.register_timer_event(5000000, 2, 0, &ttick);
+//注册资源订阅
+spi.register_subscribe("remote message ", ALL_INSTANCE, &se);
 
-    //注册事件状态机
-    uint64_t evts[2], cevt;
-    evts[0] = etick; evts[1] = ttick;
-    lmice_critical_print("begin state machine");
-    spi.register_custom_event(evts, 2, &cevt);
+//注册仿真时间定时器
+uint64_t te[2];
+spi.register_tick_event(300000, 0, 0, &te[0]);
 
-    //可信计算与QoS设置
-    lmice_critical_print("begin trust compute");
-    spi.set_qos_level(NO_QOS_SUPPORT);
-    spi.set_tc_level(NO_TRUST_COMPUTION_SUPPORT);
+//注册系统定时器
+lmice_critical_print("begin timer");
+spi.register_timer_event(5000000, 2, 0, &te[1]);
 
-    //用户工作
-    //...
-    spi.commit();
-    //getchar();
+//注册事件状态机
+uint64_t evts[2], cevt;
+evts[0] = te[0]; evts[1] = te[1];
+spi.register_custom_event(evts, 2, &cevt);
+
+//可信计算与QoS设置
+spi.set_qos_level(NO_QOS_SUPPORT);
+spi.set_tc_level(NO_TRUST_COMPUTION_SUPPORT);
+
+//通知平台工作
+spi.commit();
+
+//阻塞当前线程,回收资源
+spi.join();
+
+//...运行结束...
+
+//清理中间件
 
     //清理中间件
     lmice_critical_print("begin join");
-    spi.join();
+
 
     return 0;
 

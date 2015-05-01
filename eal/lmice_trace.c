@@ -18,7 +18,6 @@ lmice_trace_name_t lmice_trace_name[] =
     {lmice_trace_critical,  "CRITICAL", 13 /* light_purple*/},
     {lmice_trace_none,      "NULL",     7 /* white */}
 };
-
 #else
 
 lmice_trace_name_t lmice_trace_name[] =

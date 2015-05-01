@@ -13,15 +13,13 @@
 #define MMTIME_RESOLUTION 50
 
 
-static forceinline void trust_resource_compute(lm_trust_t* pt)
-{
+static forceinline void trust_resource_compute(lm_trust_t* pt) {
     size_t pos = 0;
-//    int ret = 0;
+    int ret = 0;
     lm_worker_info_t *inst=NULL;
     lm_server_t *server = pt->server;
-    //ret = eal_spin_lock(&server->lock);
-    for(inst = &server->worker, pos = 0; pos < DEFAULT_CLIENT_SIZE; ++inst, ++pos)
-    {
+    ret = eal_spin_lock(&server->lock);
+    for(inst = &server->worker, pos = 0; pos < DEFAULT_CLIENT_SIZE; ++inst, ++pos) {
         HANDLE hProcess = NULL;
         HANDLE hThread = NULL;
         DWORD err;
@@ -35,13 +33,11 @@ static forceinline void trust_resource_compute(lm_trust_t* pt)
             continue;
 
         /* check process state */
-        if(inst->process_id != 0)
-        {
+        if(inst->process_id != 0) {
             hProcess = OpenProcess(PROCESS_SET_INFORMATION|PROCESS_TERMINATE,
                     FALSE,
                     inst->process_id);
-            if(hProcess == NULL)
-            {
+            if(hProcess == NULL) {
                 err = GetLastError();
                 lmice_debug_print("process[%ud] open failed[%ud]\n", inst->process_id, err);
                 memset(inst, 0, sizeof(lm_worker_info_t));
@@ -53,13 +49,11 @@ static forceinline void trust_resource_compute(lm_trust_t* pt)
         }
 
         /* check thread state */
-        if(inst->thread_id != 0)
-        {
+        if(inst->thread_id != 0) {
             hThread = OpenThread(THREAD_SET_INFORMATION|THREAD_TERMINATE,
                                  FALSE,
                                  inst->thread_id);
-            if(hThread == NULL)
-            {
+            if(hThread == NULL){
                 err = GetLastError();
                 lmice_debug_print("thread[%ud] open failed[%ud]\n", inst->thread_id, err);
                 memset(inst, 0, sizeof(lm_worker_info_t));
@@ -72,14 +66,12 @@ static forceinline void trust_resource_compute(lm_trust_t* pt)
             CloseHandle(hThread);
         }
 
-        if(inst->process_id == 0 && inst->thread_id == 0)
-        {
+        if(inst->process_id == 0 && inst->thread_id == 0){
             memset(inst, 0, sizeof(lm_worker_info_t));
         }
 
     }
-
-    //eal_spin_unlock(&server->lock);
+    eal_spin_unlock(&server->lock);
 }
 
 

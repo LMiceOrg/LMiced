@@ -424,8 +424,6 @@ forceinline static int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
 {
     int ret = 0;
     struct addrinfo *local = NULL;
-    struct addrinfo *remote = NULL;
-    struct addrinfo *rp = NULL;
     struct addrinfo *bp = NULL;
     struct addrinfo hints;
     HANDLE hdl = NULL;
@@ -468,15 +466,18 @@ forceinline static int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
             continue;
 
         /* 绑定SOCKET到地址 */
+        /**
         ret = bind(pm->hd->nfd, bp->ai_addr, bp->ai_addrlen);
         if (ret == SOCKET_ERROR)
         {
             ret = WSAGetLastError();
-            lmice_error_print("Bind failed. Error[%u]", ret);
+            lmice_error_print("Bind failed. Error[%d]", ret);
             closesocket(pm->hd->nfd);
             continue;
         }
+        */
 
+        /** 加入组播组 */
         struct ip_mreq req;
         req.imr_interface.s_addr = ((struct sockaddr_in*)bp->ai_addr)->sin_addr.s_addr;
         req.imr_multiaddr.s_addr = inet_addr(pm->remote_addr);
@@ -485,11 +486,18 @@ forceinline static int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
                          IP_ADD_MEMBERSHIP ,
                          (const char *)&req ,
                          sizeof(req));
+        if(ret != 0)
+        {
+            ret = WSAGetLastError();
+            lmice_error_print("setsockopt failed. Error[%d]", ret);
+            closesocket(pm->hd->nfd);
+            continue;
+        }
 
-        /* 更新 id */
+        /* 更新 id (bind address, multicast group address) */
         eal_wsa_hash(pm->mode,
-                     NULL, 0,
-                     NULL, 0,
+                     pm->local_addr, 64,
+                     pm->local_port, 8,
                      pm->remote_addr, 64,
                      pm->remote_port, 8,
                      &(pm->hd->inst_id) );
