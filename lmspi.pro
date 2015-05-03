@@ -8,7 +8,8 @@ SOURCES += spi/main.cpp \
 
 HEADERS += \
     spi/lmspi_c.h \
-    spi/lmspi_cxx.h
+    spi/lmspi_cxx.h \
+    spi/lmspi_impl.h
 
 INCLUDEPATH += . \
     ../lib/boost_1_57_0

@@ -26,7 +26,7 @@
 #include <Windows.h>
 
 /* 32bit unsigned integer */
-typedef DWORD pid_t;
+#define pid_t DWORD
 
 
 #else                   /** Other compiler */

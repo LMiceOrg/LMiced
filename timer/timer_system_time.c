@@ -69,7 +69,7 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
                     res->info == NULL)
             {
                 /* remove from list */
-                lmice_debug_print("remove[%lld] from list[res.active=%lld]\n",res->info->period, res->active);
+                lmice_debug_print("remove[%p].[%lld] from list[res.active=%lld]\n",res->info, res->info->period, res->active);
                 delete_timer_by_pos(pos, res, tlist);
                 --pos;
                 continue;

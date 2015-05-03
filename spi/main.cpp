@@ -1,6 +1,10 @@
 ﻿#include "lmspi_cxx.h"
 #include "lmspi_c.h"
 
+#include <boost/python.hpp>
+#include <map>
+
+
 extern "C"
 {
 #include "../eal/lmice_eal_common.h"
@@ -18,6 +22,7 @@ extern "C"
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "lmspi_impl.h"
 
 #define MAX_CLIENT_COUNT 200
 #define ALL_INSTANCE (const char*)0
@@ -35,7 +40,6 @@ enum lmice_common
     WORK_RESOURCE = 2,
 
     CUSTOM_TYPE = 3,
-    INFINITY = -1,
 
     TIMER_EVENT_TYPE = 3,
     TICKER_EVENT_TYPE = 4,
@@ -43,7 +47,37 @@ enum lmice_common
     QOS_CONTROL_TYPE = 6,
     TRUST_CONTROL_TYPE
 };
+int lmice_spi::py_register_callback(uint64_t id, boost::python::object obj)
+{
+    m_pylist[id] = obj;
+    return 0;
+}
 
+int lmice_spi::py_get_message(uint64_t id, LMMessage& msg)
+{
+    lm_mesg_res_t *res = NULL;
+    lm_mesg_info_t *info = NULL;
+    size_t i = 0;
+    int ret = 1;
+
+    msg._addr = 0;
+    msg._capacity = 0;
+
+    for(i=0; i<128; ++i )
+    {
+        info = m_worker->mesg +i;
+        res = m_res->mesg + i;
+
+        if(info->inst_id == id)
+        {
+            msg._addr = res->addr;
+            msg._capacity = info->size;
+            ret = 0;
+            break;
+        }
+    }
+    return ret;
+}
 
 //struct lmice_resource_s
 //{
@@ -101,68 +135,17 @@ enum lmice_common
 
 
 
-class lmice_spi:public LMspi
-{
-public:
-
-    ~lmice_spi();
-
-    // 辅助函数
-    int open_shm(uint64_t hval, lmice_shm_t* shm);
-    int init();
-    int commit();
-
-    //场景管理
-    int join_session(uint64_t session_id);
-    int leave_session(uint64_t session_id);
-    //资源注册
-    int register_publish(const char* type, const char* inst, int size, uint64_t *event_id);
-    int register_subscribe(const char* type, const char* inst, uint64_t* event_id);
-    //事件管理
-    int register_tick_event(int period, int size, int due, uint64_t* event_id);
-    int register_timer_event(int period, int size, int due, uint64_t* event_id);
-    int register_custom_event(uint64_t* event_list, size_t count, uint64_t* event_id);
-
-    //基于ID的回调函数管理
-    int register_callback(uint64_t id, lmice_event_callback *callback);
-    int unregister_callback(uint64_t id, lmice_event_callback *callback);
-
-    //可信计算,QoS管理
-    int set_tc_level(int level);
-    int set_qos_level(int level);
-
-    //阻塞运行与资源回收
-    int join();
-
-
-
-    void printclients();
-    int create_shm_resource(uint64_t id, int size, lm_mesg_res_t *res);
-    int create_work_resource(uint64_t id, int size, lm_shm_res_t *res);
-    int open_server_resource();
-    int create_worker_resource();
-
-public:
-    uint64_t    m_session_id;
-    uint64_t    m_type_id;
-    uint64_t    m_inst_id;
-    pid_t       m_process_id;
-    pid_t       m_thread_id;
-
-    //    uint64_t    m_server_eid;
-    //    lmice_client_info_t *m_client;
-    //    lmice_event_t     m_server_evt;
-
-    lm_server_t *m_server;
-    lm_worker_t * m_worker;
-    lm_shm_res_t   res_server;
-    lm_worker_res_t *m_res;
-    evtfd_t         m_worker_efd;
-};
 
 lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*16,0, 0,   CLIENT_SHMNAME};
 lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE*2, 0,0,  BOARD_SHMNAME};
 
+lmice_spi::lmice_spi()
+    : m_server(0),
+      m_worker(0),
+      m_res(0)
+{
+
+}
 
 lmice_spi::~lmice_spi()
 {
@@ -232,7 +215,7 @@ int lmice_spi::create_shm_resource(uint64_t id, int size, lm_mesg_res_t *res)
     //        eal_shm_close(shm.fd, shm.addr);
     //        return ret;
     //    }
-
+    memset(shm.addr, 0, shm.size);
     res->addr = shm.addr;
     res->sfd = shm.fd;
     //    res->efd = evt.fd;
@@ -605,6 +588,8 @@ int lmice_spi::register_timer_event(int period, int size, int due, uint64_t* eve
     size_t i = 0;
     bool find = false;
 
+    lmice_critical_print("call lmice_spi::register_timer_event");
+
     ret = eal_spin_trylock(&m_worker->lock);
     if(ret != 0)
         return ret;
@@ -748,6 +733,7 @@ int lmice_spi::set_qos_level(int level)
 
 int lmice_spi::join()
 {
+    std::map<uint64_t, boost::python::object>::const_iterator ite;
     evtfd_t evts = NULL;
     if(m_res->res.efd != 0)
     {
@@ -771,8 +757,13 @@ int lmice_spi::join()
                     continue;
                 if( info->timer.state.value[0] == 0xFF )
                 {
+                    ite = m_pylist.find(info->inst_id);
+                    if( ite != m_pylist.end() )
+                    {
+                        ite->second(info->inst_id);
+                    }
                     info->timer.state.value[0] = 0x0;
-                    lmice_debug_print("server send timer[%lu] event [%lld] \n",i, info->period);
+                    //lmice_debug_print("server send timer[%lu] event [%lld] \n",i, info->period);
                 }
             }
 

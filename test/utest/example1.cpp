@@ -885,9 +885,10 @@ spi.register_custom_event(evts, 2, &cevt);
 spi.set_qos_level(NO_QOS_SUPPORT);
 spi.set_tc_level(NO_TRUST_COMPUTION_SUPPORT);
 
+lmice_critical_print("commit");
 //通知平台工作
 spi.commit();
-
+lmice_critical_print("join");
 //阻塞当前线程,回收资源
 spi.join();
 
