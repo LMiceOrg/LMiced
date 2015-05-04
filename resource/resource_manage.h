@@ -419,7 +419,7 @@ forceinline static void append_timer_to_tlist(lm_timer_res_t *val, lm_timer_res_
             /* append timer */
             res = &tlist[ ++ tlist[TIMER_LIST_NEXT_POS]->active ];
             *res = val;
-            //lmice_debug_print("append timer[%lld] active[%lld]\n", val->info->period, val->active);
+            //lmice_debug_print("append timer[%lld] at[%lld] [%p]\n", val->active, tlist[TIMER_LIST_NEXT_POS]->active, *tlist);
             break;
         }
 
@@ -462,7 +462,7 @@ forceinline static int remove_timer_from_list_by_worker(lm_timer_res_t **tlist, 
 
             if(res->worker == val)
             {
-                memmove(res, res+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
+                memmove(tlist+pos, tlist+pos+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
                 tlist[ tlist[TIMER_LIST_NEXT_POS]->active ] = NULL;
                 --tlist[TIMER_LIST_NEXT_POS]->active;
             }
@@ -529,8 +529,9 @@ forceinline static int remove_timer_from_list(lm_timer_res_t **tlist, lm_timer_r
 
             if(res == val)
             {
+                lmice_error_print("remove_timer_from_list %p\n",  res);
                 res->active = LM_TIMER_NOTUSE;
-                memmove(res, res+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
+                memmove(tlist+pos, tlist+pos+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
                 tlist[ tlist[TIMER_LIST_NEXT_POS]->active ] = NULL;
                 --tlist[TIMER_LIST_NEXT_POS]->active;
                 return 0;
@@ -661,14 +662,10 @@ forceinline static int resource_task_proc(lm_res_param_t* pm)
         ret = peek_resource_task(&task);
         if(ret != 0)
             return 0;
-//        if(task.type == LM_RES_TASK_ADD_TIMER)
-//        {
-//            //lm_timer_res_t* timer = task.pval;
-//            //lmice_debug_print("[%p]peeked timer[%d] %lld\n",timer, timer->info->type, timer->info->period);
-//        }
-
         if(task.type == LM_RES_TASK_NOTUSE)
             return 0;
+
+
         switch(task.type)
         {
         case LM_RES_TASK_NOTUSE:

@@ -12,7 +12,7 @@
 void forceinline delete_timer_by_pos(int64_t pos, lm_timer_res_t *res, lm_timer_res_t **tlist)
 {
     res->active = LM_TIMER_NOTUSE;
-    memmove(res, res+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
+    memmove(tlist+pos, tlist+pos+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
     tlist[ tlist[TIMER_LIST_NEXT_POS]->active ] = NULL;
     --tlist[TIMER_LIST_NEXT_POS]->active;
 }
@@ -64,12 +64,17 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
 
             res = tlist[pos];
 
+            //lmice_debug_print("pos[%lld] timer.active[%lld]", pos, res->active);
+
             if(res == NULL) break;
             if(res->active != LM_TIMER_RUNNING ||
                     res->info == NULL)
             {
                 /* remove from list */
-                lmice_debug_print("remove[%p].[%lld] from list[res.active=%lld]\n",res->info, res->info->period, res->active);
+                lmice_debug_print("remove[%lu].[%p] from list[res.active=%lld]\n",res->info->size,
+                                  res,
+                                  res->active
+                                  );
                 delete_timer_by_pos(pos, res, tlist);
                 --pos;
                 continue;
@@ -98,7 +103,7 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
                 }
 
                 /* Step.2 trigger timer */
-                lmice_debug_print("trigger timer[%u] [%lld]", res->info->type, res->info->period);
+                lmice_debug_print("trigger timer[%p] [%lld]", res, res->active);
                 ACTIVE_TIMER_STATE(res->info->timer.state);
                 eal_event_awake(res->worker->res.efd);
 
@@ -117,7 +122,7 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
                     /* remove from list */
                     delete_timer_by_pos(pos, res, tlist);
                     --pos;
-                    lmice_debug_print("remove timer list [%lld]\n", pos);
+                    //lmice_debug_print("remove timer list [%lld]\n", pos);
                     /* go for-loop */
                     continue;
                 }
@@ -128,11 +133,13 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
             if(tlist != newlist)
             {
                 /* move it to newlist */
+                //lmice_debug_print("tlist[%p], active[%lld] pos[%lld]\n", *tlist, tlist[TIMER_LIST_NEXT_POS]->active, pos);
                 append_timer_to_tlist(res, newlist);
-                memmove(res, res+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
+                memmove(tlist+pos, tlist+pos+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
                 tlist[ tlist[TIMER_LIST_NEXT_POS]->active ] = NULL;
                 --tlist[TIMER_LIST_NEXT_POS]->active;
                 --pos;
+                //lmice_debug_print("tlist[%p], active[%lld] pos[%lld]\n", *tlist, tlist[TIMER_LIST_NEXT_POS]->active, pos);
             }
 
 

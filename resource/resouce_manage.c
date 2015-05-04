@@ -72,7 +72,7 @@ int forceinline open_timer_resource(lm_res_param_t* pm, lm_timer_res_t* timer)
 
     task.type = LM_RES_TASK_ADD_TIMER;
     task.pval = timer;
-    //printf("%p, %p\n", task.pval, timer);
+    printf("%p, %lu\n", task.pval, timer->info->size);
     timer->active = LM_TIMER_RUNNING;
     ret = set_resource_task(&task);
     return ret;
@@ -87,6 +87,8 @@ int forceinline close_timer_resource(lm_res_param_t* pm, lm_timer_res_t* timer)
     task.pval = timer;
     timer->active = LM_TIMER_DELETE;
     set_resource_task(&task);
+
+    lmice_debug_print("close_timer_resource");
     return 0;
 
 }
@@ -203,6 +205,7 @@ void forceinline init_worker_resource(lm_worker_res_t* worker)
 {
     size_t i = 0;
     lm_worker_t* inst = (lm_worker_t*)worker->res.addr;
+    lmice_critical_print("init worker resource %p\n", inst);
     for(i=0; i<128; ++i)
     {
         worker->mesg[i].addr = 0;
@@ -353,6 +356,7 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
             /* a new worker is created */
             /* so open it at server side */
             open_worker_resource(worker);
+            lmice_critical_print("open_worker_resource[%d:%d]\n", worker->info->process_id, worker->info->thread_id);
 
 
         }
@@ -360,7 +364,7 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
 
         if(worker->info->state == WORKER_MODIFIED)
         {
-            lmice_debug_print("sync worker[%d:0x%x] message\n", worker->info->process_id, worker->info->thread_id);
+            lmice_debug_print("sync worker[%d:%d] message\n", worker->info->process_id, worker->info->thread_id);
 
             /* sync message resource timer and action */
             maintain_worker_message_resource(worker, pm);
@@ -602,20 +606,6 @@ int peek_resource_task(lm_res_task_t* task)
     ret = eal_spin_trylock(&g_reslock);
     if(ret !=0)
         return ret;
-//    do {
-//        result = InterlockedCompareExchange64(&g_reslock, 1, 0);
-//    }while(result != 0);
-
-    if(g_restask[0].type == LM_RES_TASK_ADD_TIMER)
-    {
-        lm_timer_res_t* timer = g_restask[0].pval;
-        lmice_debug_print("peek[0] timer[%d] %lld\n", timer->info->type, timer->info->period);
-    }
-    if(g_restask[1].type == LM_RES_TASK_ADD_TIMER)
-    {
-        lm_timer_res_t* timer = g_restask[1].pval;
-        lmice_debug_print("peek[1] timer[%d] %lld\n", timer->info->type, timer->info->period);
-    }
 
     if(g_restask[0].type != LM_RES_TASK_NOTUSE)
     {
@@ -623,8 +613,6 @@ int peek_resource_task(lm_res_task_t* task)
         memmove(g_restask, g_restask+1, 127*sizeof(lm_res_task_t));
         g_restask[127].type = LM_RES_TASK_NOTUSE;
 
-
-        //lmice_debug_print("peek a new res task %d\n", task->type);
     }
 
     eal_spin_unlock(&g_reslock);
