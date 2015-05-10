@@ -136,7 +136,7 @@ extern lmice_trace_name_t lmice_trace_name[];
             "\n", \
             current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), thread_name, ##__VA_ARGS__); \
     else    \
-        printf("%s%s%s%s:[%d:0x%x]" \
+        printf("%s%s%s%s:[%d:0x%p]" \
             format \
             "\n", \
             current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), pthread_self(), ##__VA_ARGS__); \

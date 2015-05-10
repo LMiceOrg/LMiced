@@ -3,9 +3,20 @@
 
 #include "lmice_eal_common.h"
 
-#if defined(__APPLE__) || defined(__linux__) || USE_POSIX_THREAD==1
+#if defined(__LINUX__) || USE_POSIX_THREAD==1
+
+#include "lmice_eal_thread_pthread.h"
+
+#elif defined(__APPLE__)
 
     #include "lmice_eal_thread_pthread.h"
+    #include <sys/syscall.h>
+    #include <unistd.h>
+static pid_t forceinline gettid()
+{
+    return syscall(SYS_thread_selfid);
+}
+
 
 #elif defined(_WIN32) && defined(_MSC_VER) /** MSC */
 

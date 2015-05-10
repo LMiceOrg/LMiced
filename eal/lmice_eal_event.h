@@ -3,11 +3,12 @@
 
 #include "lmice_eal_common.h"
 #include <stdint.h>
-#ifdef __LINUX__
-typedef int evtfd_t;
+#if defined(__LINUX__) || defined(__APPLE__)
+#include <semaphore.h>
+typedef sem_t* evtfd_t;
 struct lmice_event_s
 {
-    evtid_t eid;
+    evtfd_t fd;
     char name[32];
 };
 #elif defined(_WIN32)
@@ -23,7 +24,7 @@ struct lmice_event_s
 
 struct lmice_event_s
 {
-    evtfd_t   eid;
+    evtfd_t   fd;
     int32_t padding;
     char name[32];
 };
@@ -42,6 +43,8 @@ int eal_event_awake(evtfd_t fd);
 int eal_event_close(evtfd_t fd);
 
 int eal_event_hash_name(uint64_t hval, char *name);
+
+int eal_event_wait_one(evtfd_t fd);
 
 #endif /** LMICE_EAL_EVENT_H */
 

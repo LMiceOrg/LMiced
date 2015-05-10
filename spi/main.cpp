@@ -11,6 +11,7 @@ extern "C"
 #include "../eal/lmice_eal_hash.h"
 #include "../eal/lmice_eal_shm.h"
 #include "../eal/lmice_eal_event.h"
+#include "../eal/lmice_eal_time.h"
 #include "../eal/lmice_trace.h"
 #include "../eal/lmice_eal_thread.h"
 #include "../eal/lmice_eal_spinlock.h"
@@ -136,8 +137,8 @@ int lmice_spi::py_get_message(uint64_t id, LMMessage& msg)
 
 
 
-lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*16,0, 0,   CLIENT_SHMNAME};
-lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE*2, 0,0,  BOARD_SHMNAME};
+//lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*16,0, 0,   CLIENT_SHMNAME};
+//lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE*2, 0,0,  BOARD_SHMNAME};
 
 lmice_spi::lmice_spi()
     : m_server(0),
@@ -322,8 +323,8 @@ int lmice_spi::init()
     do {
         lm_worker_info_t info={LMICE_VERSION,
                                WORKER_MODIFIED,
-                               m_process_id,
-                               m_thread_id,
+                               (uint32_t)m_process_id,
+                               (uint32_t)m_thread_id,
                                m_type_id,
                                m_inst_id};
         //        info.version = LMICE_VERSION;
@@ -358,6 +359,13 @@ int lmice_spi::join_session(uint64_t session_id)
 {
     m_session_id = session_id;
     lmice_critical_print("Join session %llu\n", session_id);
+
+    int64_t timetm, timetm2;
+    uint64_t factor = 1;
+    init_time(&factor);
+    get_system_time(&timetm);
+    get_system_time(&timetm2);
+    lmice_critical_print("current factor[%llu] time %lld",factor, timetm2*factor - timetm*factor);
     return 0;
 }
 
@@ -741,10 +749,12 @@ int lmice_spi::join()
     }
 
     size_t i=0;
+    int ret = 0;
     lm_timer_info_t * info;
-
+#if defined(__NT__)
     for(;;)
     {
+
         DWORD hr = WaitForSingleObject(evts,
                                        INFINITE);
         switch(hr)
@@ -784,6 +794,32 @@ int lmice_spi::join()
             break;
         }
     }
+#elif defined(__MACH__)
+    for(;;) {
+           ret = eal_event_wait_one(evts);
+           if(ret == 0) {
+               for(i=0; i< 128; ++i)
+               {
+                   info = m_worker->timer +i;
+                   if(info->inst_id == 0)
+                       continue;
+                   if( info->timer.state.value[0] == 0xFF )
+                   {
+                       ite = m_pylist.find(info->inst_id);
+                       if( ite != m_pylist.end() )
+                       {
+                           ite->second(info->inst_id);
+                       }
+                       info->timer.state.value[0] = 0x0;
+                       //lmice_debug_print("server send timer[%lu] event [%lld] \n",i, info->period);
+                   }
+               }
+           }
+
+
+    }
+
+#endif
 
 
     return 0;
@@ -796,13 +832,13 @@ void lmice_spi::printclients()
     int pos = 0;
 
     int64_t begin = m_server->tm.system_time;
-    SYSTEMTIME st;
-    FileTimeToSystemTime((FILETIME*)&begin, &st);
+//    SYSTEMTIME st;
+//    FileTimeToSystemTime((FILETIME*)&begin, &st);
 
-    printf("%llu\n%d-%d-%d %d:%d:%d %d\n",
-           begin,
-           st.wYear, st.wMonth, st.wDay,
-           st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+//    printf("%llu\n%d-%d-%d %d:%d:%d %d\n",
+//           begin,
+//           st.wYear, st.wMonth, st.wDay,
+//           st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 
     for(inst = &m_server->worker, i=0;i<MAX_CLIENT_COUNT; ++inst, ++i)
     {

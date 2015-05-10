@@ -7,12 +7,11 @@ CONFIG -= qt
 SOURCES += lmice_core.c    \
     eal/lmice_ring.c \
     eal/lmice_trace.c \
-    eal/lmice_eal_endian.c \
     eal/lmice_eal_shm.c \
     eal/lmice_eal_hash.c \
     eal/lmice_eal_spinlock.c \
     eal/lmice_eal_malloc.c \
-    eal/lmice_eal_event.c \
+    eal/lmice_eal_event.c
 
 
 OTHER_FILES += \

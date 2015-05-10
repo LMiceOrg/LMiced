@@ -190,6 +190,14 @@ struct lmice_message_resource_s
 };
 typedef struct lmice_message_resource_s lm_mesg_res_t;
 
+struct lmice_event_info_s
+{
+    uint64_t inst_id;
+    uint64_t value;
+};
+
+typedef struct lmice_event_info_s lm_evt_info_t;
+
 /**
  * @brief The lmice_worker_s struct
  * 应用软件/模型
@@ -206,6 +214,9 @@ struct lmice_worker_s
     volatile int64_t lock;
     uint64_t inst_id;   // 实例编号
     uint64_t type_id;   // 类型编号
+#if defined(__APPLE__) || defined(__LINUX__)
+    lm_evt_info_t event[128];
+#endif
 
     lm_mesg_info_t      mesg[128];
     lm_timer_info_t     timer[128];
@@ -303,7 +314,7 @@ struct lmice_time_parameter_s
 
 struct lmice_time_parameter_s
 {
-    timer_t     timerid;
+    time_t     timerid;
     sigset_t    mask;
     int         sig;
     int         clockid;
@@ -358,7 +369,7 @@ struct lmice_resource_parameter_s
     lm_msglist_t submsg_list[128];
 
     /* 完成端口 */
-    HANDLE cp;
+    evtfd_t cp;
 };
 typedef struct lmice_resource_parameter_s lm_res_param_t;
 

@@ -1,5 +1,8 @@
-﻿#ifndef LMSPI_C_H
+#ifndef LMSPI_C_H
 #define LMSPI_C_H
+
+
+#if defined(__NT__) /* Windows */
 
 #if defined(LMSPI_PROJECT)
 #define dllfunc __declspec(dllexport)
@@ -7,6 +10,17 @@
 #define dllfunc __declspec(dllimport)
 #endif
 
+#elif defined(__MACH__) || defined(__LINUX__)
+
+#if defined(LMSPI_PROJECT)
+#define dllfunc __attribute__((visibility("default")))
+#else
+#define dllfunc __attribute__((visibility("hidden")))
+#endif
+
+#endif
+
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -50,4 +64,3 @@ dllfunc int lmspi_join(lmspi_t spi);
 #endif
 
 #endif /** LMSPI_C_H*/
-

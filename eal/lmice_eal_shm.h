@@ -8,9 +8,9 @@
 typedef int     shmfd_t;
 typedef void*   addr_t;
 
+#include <unistd.h>
 #include <sys/mman.h>
-struct lmice_shm_s
-{
+struct lmice_shm_s {
     shmfd_t     fd;
     int         size;
     addr_t      addr;

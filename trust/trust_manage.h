@@ -2,6 +2,7 @@
 #define TRUST_MANAGE_H
 
 #include "eal/lmice_eal_common.h"
+#include "eal/lmice_eal_time.h"
 #include "resource/resource_manage.h"
 
 #include <stdint.h>
@@ -24,10 +25,16 @@ struct lmice_trust_s
 struct time_param_s
 {
     lm_server_info_t *server;
-    timer_t     timerid;
+    time_t     timerid;
     sigset_t    mask;
     int         sig;
     int         clockid;
+};
+
+#elif defined(__MACH__)
+
+struct time_param_s {
+
 };
 
 #endif

@@ -1,5 +1,7 @@
-﻿#ifndef LMSPI_CXX_H
+#ifndef LMSPI_CXX_H
 #define LMSPI_CXX_H
+
+#if defined(__NT__) /* Windows */
 
 #if defined(LMSPI_PROJECT)
 #define dllclass __declspec(dllexport)
@@ -7,6 +9,17 @@
 #define dllclass __declspec(dllimport)
 #endif
 
+#elif defined(__MACH__) || defined(__LINUX__)
+
+#if defined(LMSPI_PROJECT)
+#define dllclass __attribute__((visibility("default")))
+#else
+#define dllclass __attribute__((visibility("hidden")))
+#endif
+
+#endif
+
+#include <stddef.h>
 #include <stdint.h>
 
 typedef void (* lmice_event_callback)(uint64_t id);

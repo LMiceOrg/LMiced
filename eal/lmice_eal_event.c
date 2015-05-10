@@ -1,7 +1,8 @@
 #include "lmice_eal_event.h"
 #include "lmice_trace.h"
-
+#include "lmice_eal_hash.h"
 #include <string.h>
+#include <errno.h>
 
 static forceinline
 void hash_to_nameA(uint64_t hval, char* name)
@@ -31,6 +32,11 @@ int eal_event_hash_name(uint64_t hval, char *name)
     return 0;
 }
 
+int eal_event_zero(lmice_event_t *e)
+{
+    memset(e, 0, sizeof(lmice_event_t));
+    return 0;
+}
 
 #if defined(_WIN32)
 
@@ -68,12 +74,6 @@ int eal_event_create(lmice_event_t* e)
 }
 
 
-int eal_event_zero(lmice_event_t *e)
-{
-    memset(e, 0, sizeof(lmice_event_t));
-    return 0;
-}
-
 
 int eal_event_awake(evtfd_t fd)
 {
@@ -104,11 +104,66 @@ int eal_event_close(evtfd_t fd)
     return ret != 0 ? 0 : 1;
 }
 
+int eal_event_wait_one(evtfd_t fd)
+{
+    DWORD hr = WaitForSingleObject(fd,
+                                   INFINITE);
+    return hr;
+}
+
 #elif defined(__APPLE__) || defined(__LINUX__)
 
-int eal_event_create(lmice_event_t* e)
-{
+int eal_event_create(lmice_event_t* e) {
+    int ret = 0;
+    e->fd = sem_open(e->name, O_CREAT|O_EXCL, 0766, 0);
+    if(e->fd == SEM_FAILED) {
+        ret = 1;
+        e->fd = 0;
+        lmice_critical_print("eal_event_create[%s] failed[%d]", e->name, errno);
+    }
+    return ret;
+}
 
+int eal_event_destroy(lmice_event_t* e) {
+
+    int ret = 0;
+    ret = eal_event_close(e->fd);
+    if(ret != 0) {
+        lmice_critical_print("eal_event_close[%s] failed[%d].", e->name, errno);
+    }
+    ret = sem_unlink(e->name);
+    if(ret != 0) {
+        lmice_critical_print("eal_event_destroy[%s] failed[%d].", e->name, errno);
+    }
+    return ret;
+}
+
+int eal_event_open(lmice_event_t* e) {
+    int ret = 0;
+    e->fd = sem_open(e->name, O_CREAT, 0666, 0);
+    if(e->fd == SEM_FAILED) {
+        e->fd = 0;
+        ret = 1;
+        lmice_critical_print("eal_event_open[%s] failed[%d].", e->name, errno);
+    }
+    return ret;
+}
+
+int eal_event_awake(evtfd_t fd) {
+    int ret = 0;
+    ret = sem_post(fd);
+    return ret;
+}
+
+int eal_event_close(evtfd_t fd) {
+    int ret = 0;
+    ret = sem_close(fd);
+    return ret;
+}
+
+int eal_event_wait_one(evtfd_t fd)
+{
+    return sem_wait(fd);
 }
 
 #endif
