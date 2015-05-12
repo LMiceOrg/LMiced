@@ -2,6 +2,7 @@
 #define LMSPI_IMPL_H
 #include <stdint.h>
 #include <map>
+#include <vector>
 #include <string>
 #include <boost/python.hpp>
 #include "lmspi_cxx.h"
@@ -26,7 +27,7 @@ struct LMMessage
     int set(const std::string& str);
     void* _addr;
     int _size;
-    int _capacity;
+    uint32_t _capacity;
 };
 
 class lmice_spi:public LMspi
@@ -79,8 +80,8 @@ public:
     uint64_t    m_session_id;
     uint64_t    m_type_id;
     uint64_t    m_inst_id;
-    pid_t       m_process_id;
-    pid_t       m_thread_id;
+    eal_pid_t       m_process_id;
+    eal_tid_t       m_thread_id;
 
     //    uint64_t    m_server_eid;
     //    lmice_client_info_t *m_client;
@@ -91,6 +92,8 @@ public:
     lm_shm_res_t   res_server;
     lm_worker_res_t *m_res;
     evtfd_t         m_worker_efd;
+    std::vector<lmice_shm_t> m_shmvec;
+    std::vector<lmice_event_t> m_evtvec;
 
     std::map<uint64_t, boost::python::object> m_pylist;
 };

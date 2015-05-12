@@ -3,12 +3,12 @@
 
 #include "lmice_eal_common.h"
 
-static pid_t forceinline gettid()
+static eal_pid_t forceinline gettid()
 {
     return GetCurrentThreadId();
 }
 
-pid_t forceinline pthread_self()
+eal_pid_t forceinline pthread_self()
 {
     return GetCurrentThreadId();
 }
@@ -28,7 +28,7 @@ int forceinline pthread_setname_np(const char* name)
     return 0;
 }
 
-pid_t forceinline getpid()
+eal_pid_t forceinline getpid()
 {
     return GetCurrentProcessId();
 }

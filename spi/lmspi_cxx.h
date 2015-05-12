@@ -28,7 +28,7 @@ typedef void (* lmice_event_callback)(uint64_t id);
 class dllclass LMspi
 {
 public:
-    virtual ~LMspi() {}
+    virtual ~LMspi();
     // 辅助函数
     virtual int init() =0;
     virtual int commit() =0;

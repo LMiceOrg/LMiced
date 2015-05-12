@@ -15,69 +15,11 @@
 
 int main(int argc, char* argv[])
 {
-//    SOCKADDR_STORAGE saRemote;
-//    printf("size %d\n", sizeof(saRemote));
-//    getchar();
-//    return 0;
-
-//    volatile int64_t a=0;
-//    int64_t r = 2;
-//    printf("a,r = [%u, %u]\n", a ,r);
-//    r = InterlockedCompareExchange(&a, 1, 0);
-//    printf("a,r = [%u, %u]\n", a ,r);
-//    r=3;
-//    r = InterlockedCompareExchange(&a, 1, 0);
-//    printf("a,r = [%u, %u]\n", a ,r);
-//    return 0;
-//    printf("%u,\t%u\n", sizeof(lm_res_param_t), sizeof(lm_worker_t));
-//    return 0;
-
-//    test *p = (test*) malloc(sizeof(test));
-//    test **b = (test**)malloc(10*sizeof(test*) );
-//    test **a = NULL;
-//    test** b2 = NULL;
-//    memset(b, 0, sizeof(test*)*10);
-//    b[9] = (test*)malloc(sizeof(test));
-//    b[9]->val = 0;
-//    printf("%x\n", b[9] );
-//    {
-//        b2 = (test**)malloc(10*sizeof(test*) );
-//        memset(b2, 0, sizeof(test*)*10);
-//        b[9]->p = (int*)b2;
-
-
-//    }
-//    printf("b1=%x\n", b);
-//    for(int i=0; i<10; ++i)
-//    {
-//        printf("%x\n", &b[i]);
-
-//    }
-//    a = (test**) b[9]->p;
-//    printf("b2=%x\n", b2);
-//    if(a != NULL)
-//    {
-//        for(int j=0; j<10; ++j)
-//            printf("\t%x\n", &a[j]);
-//        int j=0;
-//        printf("%\t\t%x\n", &a[++j]);
-//        printf("%\t\t%x\n", j);
-//    }
-
-//    //b[0] = p;
-//    a=&b[0];
-//    *a = p;
-//    printf("%x\t%x\t%x\n",b, b[0], p);
-//    test **c=NULL;
-//    change(&c, b);
-//    printf("c,b = %x, %x\n", c, b);
-//    return 0;
-
     if(argc > 1)
     {
         if(strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0)
         {
-            printf("RT-Space: Version 1.0\n");
+            printf("LMiced: Version 1.0\n");
         }
     }
     else
@@ -112,7 +54,7 @@ int main(int argc, char* argv[])
         ret = create_trust_thread(&m_trust);
         if(ret != 0)
         {
-            lmice_critical_print("Create trust service failed[%d]", ret);
+            lmice_critical_print("Create trust service failed[%d]\n", ret);
             return 1;
         }
 
@@ -125,12 +67,10 @@ int main(int argc, char* argv[])
         stop_trust_thread(&m_trust);
         destroy_schedule_service(res_param);
         destroy_resource_service(res_param);
-
         free(res_param);
 
     }
-
-
+    lmice_critical_print("LMiced shutdown service\n");
     return 0;
 }
 

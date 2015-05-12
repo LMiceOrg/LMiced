@@ -18,6 +18,8 @@
 
 
 #include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 
 #define PUBLISH_RESOURCE_TYPE  1
 #define SUBSCRIBE_RESOURCE_TYPE  2
@@ -61,7 +63,7 @@ struct lmice_time_s
 };
 typedef struct lmice_time_s lm_time_t;
 
-struct lmice_state_s
+struct __attribute__((__aligned__((8)))) lmice_state_s
 {
     uint8_t value[8];
 };
@@ -71,6 +73,7 @@ struct lmice_shm_resourece_s
 {
     evtfd_t efd;
     shmfd_t sfd;
+    int32_t padding0;
     addr_t  addr;
 };
 typedef struct lmice_shm_resourece_s lm_shm_res_t;
@@ -82,9 +85,9 @@ typedef struct lmice_shm_resourece_s lm_shm_res_t;
  */
 struct lmice_action_info_s
 {
-    uint32_t type;              //join
+    uint32_t type;              /* join */
     uint32_t size;
-    uint64_t inst_id;           // 实例编号
+    uint64_t inst_id;           /* 实例编号 */
     uint64_t act_ids[8];
     lm_state_t state;
 
@@ -95,6 +98,7 @@ typedef struct lmice_action_info_s lm_action_info_t;
 struct lmice_referenced_acion_s
 {
     uint32_t pos;
+    int32_t padding0;
     lm_action_info_t                *info;
     struct lmice_referenced_acion_s *next;
 };
@@ -103,6 +107,7 @@ typedef struct lmice_referenced_acion_s lm_ref_act_t;
 struct lmice_action_res_s
 {
     int active;
+    int padding0;
     lm_action_info_t *info;
     uint64_t work_id;
 };
@@ -114,8 +119,8 @@ typedef struct lmice_action_res_s lm_action_res_t;
  */
 struct lmice_timer_s
 {
-    uint64_t count;             // 已完成触发数量
-    int64_t  begin;             // 开始时间
+    uint64_t count;             /* 已完成触发数量 */
+    int64_t  begin;             /* 开始时间 */
     lm_state_t state;
 };
 typedef struct lmice_timer_s lm_timer_t;
@@ -126,19 +131,19 @@ typedef struct lmice_timer_s lm_timer_t;
  */
 struct lmice_timer_info_s
 {
-    uint32_t type;              // ticker timer
-    uint32_t size;              // 触发计数量 1 --> one-shot  0 --> infinite
-    int64_t period;             // 周期长度
-    int64_t due;                // 预期开始时间, -1 立即开始, 0 下周期开始
-    uint64_t inst_id;           // 实例编号
-    lm_timer_t  timer;          // 定时器状态
+    uint32_t type;              /* ticker timer */
+    uint32_t size;              /* 触发计数量 1 --> one-shot  0 --> infinite */
+    int64_t period;             /* 周期长度 */
+    int64_t due;                /* 预期开始时间, -1 立即开始, 0 下周期开始 */
+    uint64_t inst_id;           /* 实例编号 */
+    lm_timer_t  timer;          /* 定时器状态 */
 };
 typedef struct lmice_timer_info_s lm_timer_info_t;
 
 struct lmice_worker_resource_s;
 struct lmice_timer_resource_s
 {
-    int64_t active;
+    uint64_t active;
     lm_timer_info_t *info;
     lm_ref_act_t    *alist;
     struct lmice_worker_resource_s* worker;
@@ -153,8 +158,8 @@ typedef struct lmice_timer_resource_s lm_timer_res_t;
  */
 struct lmice_message_s
 {
-    volatile int32_t lock;  //sync purpose
-    uint32_t size;  //blob size( bytes)
+    volatile int32_t lock;  /* sync purpose */
+    uint32_t size;          /* blob size( bytes) */
     char blob[8];
 };
 typedef struct lmice_message_s lm_mesg_t;
@@ -165,12 +170,12 @@ typedef struct lmice_message_s lm_mesg_t;
  */
 struct lmice_message_info_s
 {
-    uint32_t        type;       // publish; subscribe by instance or subscribe by type
-    uint32_t        size;       // size
-    int64_t         period;     // message publish  period tick, zero(0) means no period
-    uint64_t inst_id;           // 实例编号 (决定了 响应事件与共享内存编号)
-    uint64_t type_id;           // 类型编号
-    lm_state_t state;           //状态
+    uint32_t        type;       /* publish; subscribe by instance or subscribe by type */
+    uint32_t        size;       /* size */
+    int64_t         period;     /* message publish  period tick, zero(0) means no period */
+    uint64_t inst_id;           /* 实例编号 (决定了 响应事件与共享内存编号) */
+    uint64_t type_id;           /* 类型编号 */
+    lm_state_t state;           /* 状态 */
 };
 typedef struct lmice_message_info_s lm_mesg_info_t;
 
@@ -180,10 +185,11 @@ typedef struct lmice_message_info_s lm_mesg_info_t;
  */
 struct lmice_message_resource_s
 {
-    //int64_t active;
+    /*int64_t active; */
     addr_t addr;
     shmfd_t sfd;
-    //    lm_shm_res_t    res;
+    int32_t padding0;
+    /*    lm_shm_res_t    res; */
     lm_mesg_info_t  *info;
     lm_ref_act_t    *alist;
     uint64_t        worker_id;
@@ -212,11 +218,8 @@ struct lmice_worker_s
     uint64_t next_id;
 
     volatile int64_t lock;
-    uint64_t inst_id;   // 实例编号
-    uint64_t type_id;   // 类型编号
-#if defined(__APPLE__) || defined(__LINUX__)
-    lm_evt_info_t event[128];
-#endif
+    uint64_t inst_id;   /* 实例编号 */
+    uint64_t type_id;   /* 类型编号 */
 
     lm_mesg_info_t      mesg[128];
     lm_timer_info_t     timer[128];
@@ -239,9 +242,10 @@ struct lmice_worker_info_s
     uint32_t state; /* fine modified dead*/
 
     /* worker process id if equal to zero(0) means rtspace maintain the resource and thread-level instance */
-    uint32_t process_id;
+    int32_t process_id;
+    int32_t padding0;
     /* worker thread id, if equal to zero(0) means process-level instance */
-    uint32_t thread_id;
+    eal_tid_t thread_id;
     /* worker type identity, user defined */
     uint64_t type_id;
     /* worker instance identity */
@@ -283,7 +287,7 @@ typedef struct lmice_server_s lm_server_t;
 
 struct lmice_timer_list_s
 {
-    lm_worker_res_t     *res_worker;    //worker pos
+    lm_worker_res_t     *res_worker;    /* worker pos */
     lm_timer_res_t      *res_timer;
 };
 typedef struct lmice_timer_list_s lm_tmlist_t;
@@ -306,7 +310,28 @@ struct lmice_time_parameter_s
     uint64_t    count;
 
 };
-#elif defined(__LINUX__) || defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__BSD__)
+
+/* GCD(Grand Central Dispatch)
+ *
+ * Apple 10.6(Snow Leopand)
+ * FreeBSD 8.1
+ *
+*/
+#include <dispatch/dispatch.h>
+struct lmice_time_parameter_s
+{
+    lm_time_t * pt;
+    pthread_t timer;
+    dispatch_source_t wTimerID;
+    dispatch_queue_t queue;
+    uint64_t wTimerRes;
+    uint64_t wTimerDelay;
+    uint64_t count;
+    volatile int64_t quit_flag;
+};
+
+#elif defined(__LINUX__)
 
 #include <unistd.h>
 #include <signal.h>
@@ -314,7 +339,7 @@ struct lmice_time_parameter_s
 
 struct lmice_time_parameter_s
 {
-    time_t     timerid;
+    timer_t     timerid;
     sigset_t    mask;
     int         sig;
     int         clockid;
@@ -374,7 +399,7 @@ struct lmice_resource_parameter_s
 typedef struct lmice_resource_parameter_s lm_res_param_t;
 
 
-forceinline static void get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)
+forceinline void get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)
 {
     lm_timer_info_t *info = val->info;
     if(info->type == TIMER_TYPE)
@@ -417,7 +442,7 @@ forceinline static void get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* v
 }
 
 
-forceinline static void append_timer_to_tlist(lm_timer_res_t *val, lm_timer_res_t **tlist)
+forceinline void append_timer_to_tlist(lm_timer_res_t *val, lm_timer_res_t **tlist)
 {
     lm_timer_res_t **res = NULL;
     lm_timer_res_t **cur = NULL;
@@ -430,7 +455,8 @@ forceinline static void append_timer_to_tlist(lm_timer_res_t *val, lm_timer_res_
             /* append timer */
             res = &tlist[ ++ tlist[TIMER_LIST_NEXT_POS]->active ];
             *res = val;
-            //lmice_debug_print("append timer[%lld] at[%lld] [%p]\n", val->active, tlist[TIMER_LIST_NEXT_POS]->active, *tlist);
+            /* lmice_debug_print("append timer[%lld] at[%lld] [%p]\n", val->active, tlist[TIMER_LIST_NEXT_POS]->active, *tlist);
+             */
             break;
         }
 
@@ -461,9 +487,9 @@ forceinline static void append_timer_to_tlist(lm_timer_res_t *val, lm_timer_res_
     } while(tlist != NULL);
 }
 
-forceinline static int remove_timer_from_list_by_worker(lm_timer_res_t **tlist, lm_worker_res_t* val)
+forceinline int remove_timer_from_list_by_worker(lm_timer_res_t **tlist, lm_worker_res_t* val)
 {
-    int64_t pos = 0;
+    uint64_t pos = 0;
     lm_timer_res_t *res = NULL;
     do
     {
@@ -487,7 +513,7 @@ forceinline static int remove_timer_from_list_by_worker(lm_timer_res_t **tlist, 
     return 0;
 }
 
-forceinline static int remove_timer_by_worker(lm_res_param_t *pm, lm_worker_res_t* val)
+forceinline int remove_timer_by_worker(lm_res_param_t *pm, lm_worker_res_t* val)
 {
     int ret = 0;
     lm_timer_res_t **tlist = NULL;
@@ -528,9 +554,9 @@ forceinline static int remove_timer_by_worker(lm_res_param_t *pm, lm_worker_res_
     return ret;
 }
 
-forceinline static int remove_timer_from_list(lm_timer_res_t **tlist, lm_timer_res_t* val)
+forceinline int remove_timer_from_list(lm_timer_res_t **tlist, lm_timer_res_t* val)
 {
-    int64_t pos = 0;
+    uint64_t pos = 0;
     lm_timer_res_t *res = NULL;
     do
     {
@@ -557,7 +583,7 @@ forceinline static int remove_timer_from_list(lm_timer_res_t **tlist, lm_timer_r
     return 1;
 }
 
-forceinline static int remove_timer_from_res(lm_res_param_t *pm, lm_timer_res_t* val)
+forceinline int remove_timer_from_res(lm_res_param_t *pm, lm_timer_res_t* val)
 {
     int ret = 0;
     lm_timer_res_t **tlist = NULL;
@@ -616,13 +642,9 @@ forceinline static int remove_timer_from_res(lm_res_param_t *pm, lm_timer_res_t*
     return ret;
 }
 
-forceinline static int append_timer_to_res(lm_res_param_t *pm, lm_timer_res_t* val)
+forceinline int append_timer_to_res(lm_res_param_t *pm, lm_timer_res_t* val)
 {
     lm_timer_res_t **tlist = NULL;
-
-//    lmice_debug_print("new timer append[%d] period[%d] tick[%lld] in list[%p]\n",
-//                      val->info->type, val->info->period,
-//                      pm->tm_param.pt->tick_zero_time, tlist);
 
     get_timer_res_list(pm, val, &tlist);
     append_timer_to_tlist(val, tlist);
@@ -651,6 +673,7 @@ enum lmice_resource_task_type_e
 struct lmice_resource_task_s
 {
     int type;           /* 任务类型 */
+    int32_t padding0;
     uint64_t inst_id;   /* 资源ID */
     void* pval;         /* 指向资源地址 */
 };
@@ -662,7 +685,7 @@ int set_resource_task(lm_res_task_t* task);
 int append_worker_to_res(lm_res_param_t* pm, lm_worker_res_t* worker);
 int remove_worker_from_res(lm_res_param_t* pm, lm_worker_res_t* worker);
 
-forceinline static int resource_task_proc(lm_res_param_t* pm)
+forceinline int resource_task_proc(lm_res_param_t* pm)
 {
     lm_res_task_t task;
     int ret = 0;

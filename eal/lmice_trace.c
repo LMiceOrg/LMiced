@@ -31,3 +31,33 @@ lmice_trace_name_t lmice_trace_name[] =
 };
 
 #endif
+
+
+void eal_trace_color_print_per_thread(int type)
+{
+    int _trace_ret;
+    time_t _trace_tm;
+    char _trace_current_time[26];
+    char _trace_thread_name[32];
+    if(lmice_trace_debug_mode == 0 && type == lmice_trace_debug)
+        return;
+    time(&_trace_tm);
+    ctime_r(&_trace_tm, _trace_current_time);
+    /*change newline to space */
+    _trace_current_time[24] = ' ';
+    _trace_ret = pthread_getname_np(pthread_self(), _trace_thread_name, 32);
+    if(_trace_ret == 0) {
+        if( strlen(_trace_thread_name) == 0) _trace_ret = -1;
+        else _trace_ret = 0;
+    }
+
+    if(_trace_ret == 0) {
+        printf("%s%s%s%s:[%d:%s]"
+               ,
+            _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), _trace_thread_name);
+    } else {
+        printf("%s%s%s%s:[%d:0x%p]",
+            _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), pthread_self());
+    }
+}
+

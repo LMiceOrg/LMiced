@@ -91,7 +91,7 @@ struct LMspiWrap : LMspi, wrapper<LMspi>
     }
     int register_timer_event(int period, int size, int due, uint64_t* event_id)
     {
-        lmice_debug_print("call LMspiWrap register_timer_event");
+        lmice_debug_print("call LMspiWrap register_timer_event\n");
         override f = this->get_override("register_timer_event");
         return f(period, size, due, event_id);
 
@@ -187,7 +187,7 @@ int pywrap_register_custom_event(LMspi&spi, const std::vector<uint64_t>& event_l
 
 int pywrap_register_callback(LMspi&spi, uint64_t id, object obj)
 {
-    lmice_debug_print("%llu event called", id);
+    lmice_debug_print("%llu event register_callback\n", id);
     lmice_spi* lspi = dynamic_cast<lmice_spi*>(&spi);
     lspi->py_register_callback(id, obj);
     return 0;

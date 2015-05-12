@@ -22,7 +22,7 @@
 //                         (const char *)&req , sizeof(req));
 //        if(ret != 0) {
 //            ret = WSAGetLastError();
-//            lmice_error_print("setsockopt failed. Error[%d]", ret);
+//            lmice_error_print("setsockopt failed. Error[%d]\n", ret);
 //            closesocket(hd->nfd);
 //            break;
 //        }

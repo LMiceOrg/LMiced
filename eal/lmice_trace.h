@@ -1,5 +1,5 @@
-#ifndef TRACE_H
-#define TRACE_H
+#ifndef LMICE_TRACE_H
+#define LMICE_TRACE_H
 
 #include "lmice_eal_common.h"
 #include "lmice_eal_thread.h"
@@ -101,6 +101,13 @@ extern lmice_trace_name_t lmice_trace_name[];
 
 
 #else /** Posix */
+
+
+void eal_trace_color_print_per_thread(int type);
+
+#define EAL_TRACE_COLOR_PRINT_THREAD(x)  eal_trace_color_print_per_thread(lmice_trace_##x);printf
+
+/*
 #define LMICE_TRACE_COLOR_PRINT(type, format, ...) do{ \
     char current_time[26];  \
     time_t tm;  \
@@ -108,41 +115,35 @@ extern lmice_trace_name_t lmice_trace_name[];
         break; \
     time(&tm);  \
     ctime_r(&tm, current_time); \
-    /*change newline to space */    \
     current_time[24] = ' '; \
     printf("%s%s%s%s:" format "\n", current_time, LMICE_TRACE_COLOR_TAG3(type), ##__VA_ARGS__); \
     }while (0);
 
-#define LMICE_TRACE_COLOR_PRINT_PER_THREAD(type, format, ...) do{ \
-    int ret;    \
-    time_t tm;  \
-    char current_time[26];  \
-    char thread_name[32]; \
+#define LMICE_TRACE_COLOR_PRINT_PER_THREAD(type, format, args...) do{ \
+    int _trace_ret;    \
+    time_t _trace_tm;  \
+    char _trace_current_time[26];  \
+    char _trace_thread_name[32]; \
     if(lmice_trace_debug_mode == 0 && type == lmice_trace_debug)  \
         break; \
-    time(&tm);  \
-    ctime_r(&tm, current_time); \
-    /*change newline to space */    \
-    current_time[24] = ' '; \
-    ret = pthread_getname_np(pthread_self(), thread_name, 32);  \
-    if(ret == 0) {   \
-        ret = strlen(thread_name);  \
-        if(ret == 0) ret = -1;  \
-        else ret = 0;   \
+    time(&_trace_tm);  \
+    ctime_r(&_trace_tm, _trace_current_time); \
+    _trace_current_time[24] = ' '; \
+    _trace_ret = pthread_getname_np(pthread_self(), _trace_thread_name, 32);  \
+    if(_trace_ret == 0) {   \
+        _trace_ret = strlen(_trace_thread_name);  \
+        if(_trace_ret == 0) _trace_ret = -1;  \
+        else _trace_ret = 0;   \
     }   \
-    if(ret == 0)    \
-        printf("%s%s%s%s:[%d:%s]" \
-            format \
-            "\n", \
-            current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), thread_name, ##__VA_ARGS__); \
+    if(_trace_ret == 0)    \
+        printf("%s%s%s%s:[%d:%s]" format "\n", \
+            _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), _trace_thread_name, args); \
     else    \
-        printf("%s%s%s%s:[%d:0x%p]" \
-            format \
-            "\n", \
-            current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), pthread_self(), ##__VA_ARGS__); \
+        printf("%s%s%s%s:[%d:0x%p]" format "\n", \
+            _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), pthread_self(), args); \
     }while (0);
 
-#endif
+
 #define LMICE_TRACE_PER_THREAD(env, type, format, ...) do{ \
     char current_time[26];  \
     time_t tm;  \
@@ -150,7 +151,6 @@ extern lmice_trace_name_t lmice_trace_name[];
         break; \
     time(&tm);  \
     ctime_r(&tm, current_time); \
-    /*change newline to space */    \
     current_time[24] = ' '; \
     if(lmice_trace_debug_mode == 1) \
         fprintf((env)->logfd, \
@@ -170,7 +170,6 @@ extern lmice_trace_name_t lmice_trace_name[];
         break; \
     time(&tm);  \
     ctime_r(&tm, current_time); \
-    /*change newline to space */    \
     current_time[24] = ' '; \
     if(lmice_trace_debug_mode == 1) \
         fprintf((env)->logfd, \
@@ -182,25 +181,26 @@ extern lmice_trace_name_t lmice_trace_name[];
         current_time, lmice_trace_name[type].name,  ##__VA_ARGS__); \
     } while(0);
 
+*/
+#endif
 
-#define lmice_info_print(format,...)      LMICE_TRACE_COLOR_PRINT_PER_THREAD(lmice_trace_info,        format, ##__VA_ARGS__)
 
-#define lmice_debug_print(format,...)     LMICE_TRACE_COLOR_PRINT_PER_THREAD(lmice_trace_debug,       format, ##__VA_ARGS__)
+#define lmice_info_print EAL_TRACE_COLOR_PRINT_THREAD(info)
+#define lmice_debug_print EAL_TRACE_COLOR_PRINT_THREAD(debug)
+#define lmice_warning_print EAL_TRACE_COLOR_PRINT_THREAD(warning)
+#define lmice_error_print EAL_TRACE_COLOR_PRINT_THREAD(error)
+#define lmice_critical_print EAL_TRACE_COLOR_PRINT_THREAD(critical)
 
-#define lmice_warning_print(format,...)   LMICE_TRACE_COLOR_PRINT_PER_THREAD(lmice_trace_warning,     format, ##__VA_ARGS__)
-
-#define lmice_error_print(format,...) LMICE_TRACE_COLOR_PRINT_PER_THREAD(lmice_trace_error,       format, ##__VA_ARGS__)
-
-#define lmice_critical_print(format,...)  LMICE_TRACE_COLOR_PRINT_PER_THREAD(lmice_trace_critical,    format, ##__VA_ARGS__)
-
+/*
 #define lmice_info_log(env, format,...) LMICE_TRACE_PER_THREAD(env, lmice_trace_info, format, ##__VA_ARGS__)
 #define lmice_debug_log(env, format,...) LMICE_TRACE_PER_THREAD(env, lmice_trace_debug, format, ##__VA_ARGS__)
 #define lmice_warning_log(env, format,...) LMICE_TRACE_PER_THREAD(env, lmice_trace_warning, format, ##__VA_ARGS__)
 #define lmice_error_log(env, format,...) LMICE_TRACE_PER_THREAD(env, lmice_trace_error, format, ##__VA_ARGS__)
 #define lmice_critical_log(env, format,...) LMICE_TRACE_PER_THREAD(env, lmice_trace_critical, format, ##__VA_ARGS__)
+*/
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /** TRACE_H */
+#endif /** LMICE_TRACE_H */

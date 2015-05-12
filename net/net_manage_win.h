@@ -222,7 +222,7 @@ DWORD WINAPI tcp_accept_thread_proc( LPVOID lpParameter)
         acceptSocket = accept(pm->nfd, (struct sockaddr*)&saRemote, &RemoteLen);
         if(SOCKET_ERROR == acceptSocket){	// 接收客户端失败
             ret = WSAGetLastError();
-            lmice_error_print("Accept Socket Error[%d] ", ret);
+            lmice_error_print("Accept Socket Error[%d] \n", ret);
             return -1;
         }
 
@@ -331,7 +331,7 @@ int forceinline create_tcp_service(eal_wsa_service_param * pm)
             if(ret == SOCKET_ERROR)
             {
                 ret = WSAGetLastError();
-                lmice_error_print("Connect failed. Error[%u]", ret);
+                lmice_error_print("Connect failed. Error[%u]\n", ret);
                 closesocket(pm->nfd);
                 continue;
             }
@@ -342,7 +342,7 @@ int forceinline create_tcp_service(eal_wsa_service_param * pm)
             if (ret == SOCKET_ERROR)
             {
                 ret = WSAGetLastError();
-                lmice_error_print("Bind failed. Error[%u]", ret);
+                lmice_error_print("Bind failed. Error[%u]\n", ret);
                 closesocket(pm->nfd);
                 continue;
             }
@@ -351,7 +351,7 @@ int forceinline create_tcp_service(eal_wsa_service_param * pm)
             ret = listen(pm->nfd, 10);
             if(ret == SOCKET_ERROR) {
                 ret = WSAGetLastError();
-                lmice_error_print("Listen failed. Error[%u]", ret);
+                lmice_error_print("Listen failed. Error[%u]\n", ret);
                 closesocket(pm->nfd);
                 continue;
             }

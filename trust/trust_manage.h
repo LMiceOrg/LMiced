@@ -31,10 +31,19 @@ struct time_param_s
     int         clockid;
 };
 
-#elif defined(__MACH__)
+#elif defined(__APPLE__)
+/* Apple 10.6(Snow Leopand) GCD(Grand Central Dispatch) */
+#include <dispatch/dispatch.h>
 
-struct time_param_s {
-
+struct lmice_trust_s {
+    evtfd_t             efd;
+    lm_server_t         *server;
+    dispatch_source_t   wTimerID;
+    dispatch_queue_t    queue;
+    uint64_t            wTimerRes;/* leeway */
+    uint64_t            wTimerDelay; /* interval */
+    pthread_t           timer;
+    volatile int64_t    quit_flag;
 };
 
 #endif

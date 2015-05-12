@@ -25,7 +25,7 @@ DWORD WINAPI eal_wsa_tcp_accept_thread_proc( LPVOID lpParameter)
         hd->nfd = accept(pm->hd->nfd, (struct sockaddr*)&hd->addr, &hd->addrlen);
         if(SOCKET_ERROR == hd->nfd){	// 接收客户端失败
             ret = WSAGetLastError();
-            lmice_error_print("Accept Socket Error[%d] ", ret);
+            lmice_error_print("Accept Socket Error[%d] \n", ret);
             eal_wsa_remove_handle(hd);
             break;
         }
@@ -47,7 +47,7 @@ DWORD WINAPI eal_wsa_tcp_accept_thread_proc( LPVOID lpParameter)
                                0);
         if(hdl == NULL)
         {
-            lmice_error_print("CreateIoCompletionPort failed");
+            lmice_error_print("CreateIoCompletionPort failed\n");
             eal_wsa_remove_handle(hd);
             break;
         }

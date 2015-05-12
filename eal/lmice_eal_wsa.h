@@ -229,7 +229,7 @@ forceinline static int eal_wsa_create_tcp_service(eal_wsa_service_param* pm)
         if (ret == SOCKET_ERROR)
         {
             ret = WSAGetLastError();
-            lmice_error_print("Bind failed. Error[%u]", ret);
+            lmice_error_print("Bind failed. Error[%u]\n", ret);
             closesocket(pm->hd->nfd);
             continue;
         }
@@ -251,7 +251,7 @@ forceinline static int eal_wsa_create_tcp_service(eal_wsa_service_param* pm)
                 //ret = WSAConnect(pm->nfd, rp->ai_addr, rp->ai_addrlen, NULL, NULL, NULL);
                 if(ret == SOCKET_ERROR) {
                     ret = WSAGetLastError();
-                    lmice_error_print("Connect failed. Error[%u]", ret);
+                    lmice_error_print("Connect failed. Error[%u]\n", ret);
                     continue;
                 }
 
@@ -304,7 +304,7 @@ forceinline static int eal_wsa_create_tcp_service(eal_wsa_service_param* pm)
             ret = listen(pm->hd->nfd, 10);
             if(ret == SOCKET_ERROR) {
                 ret = WSAGetLastError();
-                lmice_error_print("Listen failed. Error[%u]", ret);
+                lmice_error_print("Listen failed. Error[%u]\n", ret);
                 closesocket(pm->hd->nfd);
                 continue;
             }
@@ -372,7 +372,7 @@ forceinline static int eal_wsa_create_udp_handle(eal_wsa_service_param* pm)
         ret = bind(pm->hd->nfd, bp->ai_addr, bp->ai_addrlen);
         if (ret == SOCKET_ERROR) {
             ret = WSAGetLastError();
-            lmice_error_print("Bind failed. Error[%u]", ret);
+            lmice_error_print("Bind failed. Error[%u]\n", ret);
             closesocket(pm->hd->nfd);
             continue;
         }
@@ -471,7 +471,7 @@ forceinline static int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
         if (ret == SOCKET_ERROR)
         {
             ret = WSAGetLastError();
-            lmice_error_print("Bind failed. Error[%d]", ret);
+            lmice_error_print("Bind failed. Error[%d]\n", ret);
             closesocket(pm->hd->nfd);
             continue;
         }
@@ -489,7 +489,7 @@ forceinline static int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
         if(ret != 0)
         {
             ret = WSAGetLastError();
-            lmice_error_print("setsockopt failed. Error[%d]", ret);
+            lmice_error_print("setsockopt failed. Error[%d]\n", ret);
             closesocket(pm->hd->nfd);
             continue;
         }

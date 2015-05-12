@@ -20,11 +20,11 @@ struct lmice_ring_s
 
 typedef struct lmice_ring_s* lmice_ring_t;
 
-int lmice_ring_create(lmice_ring_t* ring, int size, int count);
+int lmice_ring_create(lmice_ring_t* ring, unsigned int size, unsigned int count);
 int lmice_ring_destroy(lmice_ring_t ring);
 
-int lmice_ring_write(lmice_ring_t ring, void* data, int size);
-int lmice_ring_read(lmice_ring_t ring, void** data, int* size);
+int lmice_ring_write(lmice_ring_t ring, void* data, unsigned int size);
+int lmice_ring_read(lmice_ring_t ring, void** data, unsigned int* size);
 
 #ifdef __cplusplus
 }

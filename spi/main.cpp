@@ -1,4 +1,10 @@
 ﻿#include "lmspi_cxx.h"
+
+LMspi::~LMspi()
+{
+
+}
+
 #include "lmspi_c.h"
 
 #include <boost/python.hpp>
@@ -22,6 +28,7 @@ extern "C"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <signal.h>
 
 #include "lmspi_impl.h"
 
@@ -140,12 +147,21 @@ int lmice_spi::py_get_message(uint64_t id, LMMessage& msg)
 //lmice_shm_t client_shm = {0, DEFAULT_SHM_SIZE*16,0, 0,   CLIENT_SHMNAME};
 //lmice_shm_t board_shm  = {0, DEFAULT_SHM_SIZE*2, 0,0,  BOARD_SHMNAME};
 
+volatile int g_quit = 0;
+static void sig_handler(int sig)
+{
+    if(sig == SIGINT) {
+        g_quit = 1;
+    }
+}
+
 lmice_spi::lmice_spi()
     : m_server(0),
       m_worker(0),
       m_res(0)
 {
-
+    g_quit = 0;
+    signal(SIGINT, sig_handler);
 }
 
 lmice_spi::~lmice_spi()
@@ -173,9 +189,11 @@ int lmice_spi::create_work_resource(uint64_t id, int size, lm_shm_res_t *res)
         return ret;
     }
 
+    m_shmvec.push_back(shm);
+
     eal_event_zero(&evt);
     eal_event_hash_name(id, evt.name);
-    lmice_debug_print("create event[%s]", evt.name);
+    lmice_debug_print("create event[%s]\n", evt.name);
     ret = eal_event_create(&evt);
     if(ret != 0)
     {
@@ -183,6 +201,8 @@ int lmice_spi::create_work_resource(uint64_t id, int size, lm_shm_res_t *res)
         eal_shm_close(shm.fd, shm.addr);
         return ret;
     }
+
+    m_evtvec.push_back(evt);
 
     res->addr = shm.addr;
     res->sfd = shm.fd;
@@ -206,9 +226,11 @@ int lmice_spi::create_shm_resource(uint64_t id, int size, lm_mesg_res_t *res)
         return ret;
     }
 
+    m_shmvec.push_back(shm);
+
     //    eal_event_zero(&evt);
     //    eal_event_hash_name(id, evt.name);
-    //    lmice_debug_print("create event[%s]", evt.name);
+    //    lmice_debug_print("create event[%s]\n", evt.name);
     //    ret = eal_event_create(&evt);
     //    if(ret != 0)
     //    {
@@ -257,9 +279,11 @@ int lmice_spi::open_server_resource()
     ret = eal_shm_open_readwrite(&shm);
     if(ret != 0)
     {
-        lmice_critical_print("open server shm failed[%d]\n", ret);
+        lmice_critical_print("open server shm[%s] failed[%d]\n", shm.name, ret);
         return ret;
     }
+
+    //m_shmvec.push_back(shm);
 
 
     /*打开公共区域管理事件*/
@@ -273,10 +297,13 @@ int lmice_spi::open_server_resource()
         return ret;
     }
 
+    //m_evtvec.push_back(evt);
+
     m_server = (lm_server_t*)shm.addr;
     res_server.addr = shm.addr;
     res_server.efd = evt.fd;
     res_server.sfd = shm.fd;
+    lmice_debug_print("server event [%s] id[%p]\n", evt.name, evt.fd);
     return ret;
 }
 
@@ -309,7 +336,25 @@ int lmice_spi::init()
     m_process_id = getpid();
 
     //线程ID
-    m_thread_id = gettid();
+    m_thread_id = eal_gettid();
+//    pthread_t pt = pthread_self();
+//    t = pthread_mach_thread_np(pt);
+//    m_thread_id = t;
+    printf("worker getid tid[%llu]\n", m_thread_id);
+
+//    printf("pthread id %p\n", pt);
+//    int err = 0;
+//    ret = syscall(SYS___pthread_kill, m_thread_id, 0);
+//    err = errno;
+//    lmice_error_print("syscall called[%ld] %d, %d\n",m_thread_id, ret, err);
+//    ret = pthread_kill(pt, 0);
+//    err = errno;
+//    lmice_error_print("pthread called %d, %d\n", ret, err);
+//    {
+
+
+//        m_thread_id = 0;
+//    }
 
     m_res = new lm_worker_res_t;
 
@@ -323,8 +368,9 @@ int lmice_spi::init()
     do {
         lm_worker_info_t info={LMICE_VERSION,
                                WORKER_MODIFIED,
-                               (uint32_t)m_process_id,
-                               (uint32_t)m_thread_id,
+                               m_process_id,
+                               0,//padding
+                               m_thread_id,
                                m_type_id,
                                m_inst_id};
         //        info.version = LMICE_VERSION;
@@ -362,10 +408,10 @@ int lmice_spi::join_session(uint64_t session_id)
 
     int64_t timetm, timetm2;
     uint64_t factor = 1;
-    init_time(&factor);
+    eal_init_timei(&factor);
     get_system_time(&timetm);
     get_system_time(&timetm2);
-    lmice_critical_print("current factor[%llu] time %lld",factor, timetm2*factor - timetm*factor);
+    lmice_critical_print("current factor[%llu] time %lld\n",factor, timetm2*factor - timetm*factor);
     return 0;
 }
 
@@ -596,7 +642,7 @@ int lmice_spi::register_timer_event(int period, int size, int due, uint64_t* eve
     size_t i = 0;
     bool find = false;
 
-    lmice_critical_print("call lmice_spi::register_timer_event");
+    lmice_critical_print("call lmice_spi::register_timer_event\n");
 
     ret = eal_spin_trylock(&m_worker->lock);
     if(ret != 0)
@@ -797,7 +843,19 @@ int lmice_spi::join()
 #elif defined(__MACH__)
     for(;;) {
            ret = eal_event_wait_one(evts);
-           if(ret == 0) {
+           if(g_quit == 1) { // quit
+               // free and leave
+               printf("ret = %d, gquit=%d\n", ret, g_quit);
+               size_t i;
+               for(i=0; i< m_shmvec.size(); ++i) {
+                   eal_shm_destroy( &m_shmvec[i] );
+               }
+               for(i=0; i< m_evtvec.size(); ++i) {
+                   eal_event_destroy(&m_evtvec[i]);
+               }
+
+               return 0;
+           } else if(ret == 0) { //Fired event
                for(i=0; i< 128; ++i)
                {
                    info = m_worker->timer +i;
@@ -811,13 +869,16 @@ int lmice_spi::join()
                            ite->second(info->inst_id);
                        }
                        info->timer.state.value[0] = 0x0;
-                       //lmice_debug_print("server send timer[%lu] event [%lld] \n",i, info->period);
+
                    }
                }
+           } else {
+               lmice_critical_print("sem_wait return %d\n", ret);
            }
 
 
-    }
+
+    } //for-loop
 
 #endif
 
@@ -845,7 +906,7 @@ void lmice_spi::printclients()
         if(inst->inst_id != 0)
         {
             ++pos;
-            lmice_debug_print("inst[ %d ] version %d, processid =%llu, threadid= %llu, instid=%llX",
+            lmice_debug_print("inst[ %d ] version %d, processid =%d, threadid= %llu, instid=%llX\n",
                               pos, inst->version,
                               inst->process_id,
                               inst->thread_id,
@@ -853,7 +914,7 @@ void lmice_spi::printclients()
         }
     }
     int64_t end = m_server->tm.system_time;
-    printf("total time %x\n", end - begin);
+    printf("total time %llx\n", end - begin);
 }
 
 

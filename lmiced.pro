@@ -7,8 +7,8 @@ SOURCES += main.c \
 timer/timer_system_time.c \
 resource/resouce_manage.c \
     trust/trust_manage.c \
-    schedule/action_schedule.c \
-    net/net_manage.c
+    schedule/action_schedule.c
+#    net/net_manage.c
 #    main.cpp \
 #    resource/resource_shm.cpp \
 #    resource/resource_meta_data.c \
@@ -102,7 +102,7 @@ LIBS += -lws2_32 -lKernel32
 macx-clang*{
 message("LMiced - MacX Darwin")
 
-QMAKE_CFLAGS += -std=c89
+QMAKE_CFLAGS += -std=c89 -Wall -Weverything -Wno-long-long
 QMAKE_CFLAGS += -funit-at-a-time -Wno-unused-function
 QMAKE_CFLAGS += -Dinline=__inline
 
@@ -132,21 +132,20 @@ LIBS += -L/Users/hehao/work/lib/mongo-cxx-driver-v2.4 \
 
 LIBS += -lmongoclient -lboost_filesystem -lboost_system -lboost_thread
 
-#CONFIG(debug, debug|release) {
-#message("debug mode")
-#LIBS += -L../debug_build
-#}
+CONFIG(debug, debug|release) {
+message("debug mode")
+LIBS += -L../build/debug
+}
 
-#CONFIG(release, debug|release) {
-#LIBS += -L../release_build
-#}
-
-#LIBS += -lsrc
+CONFIG(release, debug|release) {
+LIBS += -L../build/release
+}
 
 #for debug
 QMAKE_CXXFLAGS_DEBUG += -D_DEBUG -DDEBUG
 QMAKE_CFLAGS_DEBUG += -D_DEBUG -DDEBUG
 
-
+#macosx min version
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
 }
 

@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-int lmice_ring_create(lmice_ring_t *ring, int size, int count)
+int lmice_ring_create(lmice_ring_t *ring, unsigned int size, unsigned int count)
 {
     size_t sz = size*count+sizeof(struct lmice_ring_s) - 8;
     if( (sz % 4) != 0)

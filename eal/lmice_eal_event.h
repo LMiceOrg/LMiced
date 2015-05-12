@@ -45,6 +45,7 @@ int eal_event_close(evtfd_t fd);
 int eal_event_hash_name(uint64_t hval, char *name);
 
 int eal_event_wait_one(evtfd_t fd);
+int eal_event_wait_timed(evtfd_t fd, int millisec);
 
 #endif /** LMICE_EAL_EVENT_H */
 

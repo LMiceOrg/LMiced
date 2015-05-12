@@ -4,7 +4,7 @@
 #include <string.h>
 #include <errno.h>
 
-static forceinline
+forceinline
 void hash_to_nameA(uint64_t hval, char* name)
 {
     int i=0;
@@ -47,11 +47,11 @@ int eal_event_open(lmice_event_t* e)
     if(e->fd == NULL)
     {
         DWORD hr = GetLastError();
-        lmice_error_print("Open event[%s] failed[%lu]", e->name, hr);
+        lmice_error_print("Open event[%s] failed[%lu]\n", e->name, hr);
         e->fd = 0;
         return 1;
     }
-    lmice_debug_print("event[%s] created as[%p]", e->name, e->fd);
+    lmice_debug_print("event[%s] created as[%p]\n", e->name, e->fd);
     return 0;
 }
 
@@ -65,11 +65,13 @@ int eal_event_create(lmice_event_t* e)
     if(e->fd == NULL)
     {
         DWORD hr = GetLastError();
-        lmice_error_print("Create event[%s] failed[%lu]", e->name, hr);
+        lmice_error_print("Create event[%s] failed[%lu]\n", e->name, hr);
         e->fd = 0;
         return 1;
     }
-    //lmice_debug_print("event[%s] created as[%d]", e->name, (uint64_t)e->fd);
+    /*
+     * lmice_debug_print("event[%s] created as[%d]\n", e->name, (uint64_t)e->fd);
+     */
     return 0;
 }
 
@@ -117,9 +119,11 @@ int eal_event_create(lmice_event_t* e) {
     int ret = 0;
     e->fd = sem_open(e->name, O_CREAT|O_EXCL, 0766, 0);
     if(e->fd == SEM_FAILED) {
+        sem_unlink(e->name);
+
         ret = 1;
         e->fd = 0;
-        lmice_critical_print("eal_event_create[%s] failed[%d]", e->name, errno);
+        lmice_critical_print("eal_event_create[%s] failed[%d]\n", e->name, errno);
     }
     return ret;
 }
@@ -127,13 +131,9 @@ int eal_event_create(lmice_event_t* e) {
 int eal_event_destroy(lmice_event_t* e) {
 
     int ret = 0;
-    ret = eal_event_close(e->fd);
-    if(ret != 0) {
-        lmice_critical_print("eal_event_close[%s] failed[%d].", e->name, errno);
-    }
     ret = sem_unlink(e->name);
     if(ret != 0) {
-        lmice_critical_print("eal_event_destroy[%s] failed[%d].", e->name, errno);
+        lmice_critical_print("eal_event_destroy[%s] failed[%d].\n", e->name, errno);
     }
     return ret;
 }
@@ -144,7 +144,7 @@ int eal_event_open(lmice_event_t* e) {
     if(e->fd == SEM_FAILED) {
         e->fd = 0;
         ret = 1;
-        lmice_critical_print("eal_event_open[%s] failed[%d].", e->name, errno);
+        lmice_critical_print("eal_event_open[%s] failed[%d].\n", e->name, errno);
     }
     return ret;
 }
@@ -164,6 +164,30 @@ int eal_event_close(evtfd_t fd) {
 int eal_event_wait_one(evtfd_t fd)
 {
     return sem_wait(fd);
+}
+
+int eal_event_wait_timed(evtfd_t fd, int millisec)
+{
+    int ret;
+    int cnt = 0;
+    do {
+        ret = sem_trywait(fd);
+        switch(ret)
+        {
+        case 0:
+            return ret;
+        case EAGAIN:
+            cnt += 1000;
+            sleep(1);
+            break;
+        case EDEADLK:
+        case EINTR:
+        case EINVAL:
+            return ret;
+        }
+
+    } while(cnt >= millisec);
+    return ret;
 }
 
 #endif

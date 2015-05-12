@@ -9,7 +9,7 @@
 
 
 
-void forceinline delete_timer_by_pos(int64_t pos, lm_timer_res_t *res, lm_timer_res_t **tlist)
+forceinline void delete_timer_by_pos(uint64_t pos, lm_timer_res_t *res, lm_timer_res_t **tlist)
 {
     res->active = LM_TIMER_NOTUSE;
     memmove(tlist+pos, tlist+pos+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
@@ -19,7 +19,7 @@ void forceinline delete_timer_by_pos(int64_t pos, lm_timer_res_t *res, lm_timer_
 
 
 
-void forceinline get_tlist_by_remain(int64_t remain, lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)
+forceinline void get_tlist_by_remain(int64_t remain, lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)
 {
     lm_timer_info_t *info = val->info;
     if(info->type == TIMER_TYPE)
@@ -50,9 +50,9 @@ void forceinline get_tlist_by_remain(int64_t remain, lm_res_param_t* pm, lm_time
     }
 }
 
-void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res_param_t*  pm)
+forceinline void timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res_param_t*  pm)
 {
-    int64_t pos = 0;
+    uint64_t pos = 0;
     int64_t remain = 0;
     lm_timer_res_t *res = NULL;
     lm_ref_act_t *act = NULL;
@@ -64,14 +64,16 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
 
             res = tlist[pos];
 
-            //lmice_debug_print("pos[%lld] timer.active[%lld]", pos, res->active);
+            /*
+             lmice_debug_print("pos[%lld] timer.active[%lld]\n", pos, res->active);
+            */
 
             if(res == NULL) break;
             if(res->active != LM_TIMER_RUNNING ||
                     res->info == NULL)
             {
                 /* remove from list */
-                lmice_debug_print("remove[%lu].[%p] from list[res.active=%lld]\n",res->info->size,
+                lmice_debug_print("remove[%ud].[%p] from list[res.active=%lld]\n",res->info->size,
                                   res,
                                   res->active
                                   );
@@ -85,10 +87,14 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
             else
                 remain = res->info->timer.begin + res->info->period - now;
 
-            //lmice_debug_print("check timer[%lld][%p]\n", res->info->period, tlist);
+            /*
+             lmice_debug_print("check timer[%lld][%p]\n", res->info->period, tlist);
+            */
 
             if( remain <= 0)
             {
+                lmice_debug_print("trigger timer[%lld][%p] [%lld]\n",remain, res, res->active);
+
                 res->info->timer.begin = now;
                 remain = res->info->period;
 
@@ -103,11 +109,9 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
                 }
 
                 /* Step.2 trigger timer */
-                lmice_debug_print("trigger timer[%p] [%lld]", res, res->active);
+
                 ACTIVE_TIMER_STATE(res->info->timer.state);
                 eal_event_awake(res->worker->res.efd);
-
-                //lmice_debug_print("timer 0x%X triggered\n", res->info->inst_id);
 
                 /* Step.3 update trigger counter */
                 res->info->timer.count ++;
@@ -117,12 +121,12 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
                 /* size = 0 means infinite */
                 if(res->info->size == 0 ||
                         (res->info->timer.count >= res->info->size
-                        && res->info->size > 0) )
+                         && res->info->size > 0) )
                 {
                     /* remove from list */
                     delete_timer_by_pos(pos, res, tlist);
                     --pos;
-                    //lmice_debug_print("remove timer list [%lld]\n", pos);
+
                     /* go for-loop */
                     continue;
                 }
@@ -133,13 +137,13 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
             if(tlist != newlist)
             {
                 /* move it to newlist */
-                //lmice_debug_print("tlist[%p], active[%lld] pos[%lld]\n", *tlist, tlist[TIMER_LIST_NEXT_POS]->active, pos);
+
                 append_timer_to_tlist(res, newlist);
                 memmove(tlist+pos, tlist+pos+1, (tlist[TIMER_LIST_NEXT_POS]->active - pos)*sizeof(lm_timer_res_t*) );
                 tlist[ tlist[TIMER_LIST_NEXT_POS]->active ] = NULL;
                 --tlist[TIMER_LIST_NEXT_POS]->active;
                 --pos;
-                //lmice_debug_print("tlist[%p], active[%lld] pos[%lld]\n", *tlist, tlist[TIMER_LIST_NEXT_POS]->active, pos);
+
             }
 
 
@@ -154,7 +158,7 @@ void forceinline timer_list_schedule(int64_t now, lm_timer_res_t **tlist, lm_res
 
 void forceinline due_list_schedule(int64_t now, lm_timer_res_t** tlist, lm_res_param_t*  pm)
 {
-    int64_t pos = 0;
+    uint64_t pos = 0;
     int64_t remain = 0;
     lm_timer_res_t *res = NULL;
     lm_ref_act_t *act = NULL;
@@ -205,7 +209,6 @@ void forceinline due_list_schedule(int64_t now, lm_timer_res_t** tlist, lm_res_p
                 if(res->info->timer.count < res->info->size
                         || res->info->size == 0)
                 {
-                    //ret = add_timer_to_tmlist(active_list, tlist+pos);
                     append_timer_to_res(pm, res);
                 }
 
@@ -222,7 +225,7 @@ void forceinline due_list_schedule(int64_t now, lm_timer_res_t** tlist, lm_res_p
     } while(tlist != NULL);
 }
 
-static void forceinline update_time_and_tick(lm_time_param_t* pm)
+forceinline void update_time_and_tick(lm_time_param_t* pm)
 {
     lm_time_t*      pt = pm->pt;
 
@@ -240,18 +243,18 @@ static void forceinline update_time_and_tick(lm_time_param_t* pm)
     }
     else
     {
-        pt->system_time += 10000LL*pm->wTimerDelay;
+        pt->system_time += 10000LL * (int64_t)pm->wTimerDelay;
 
         if(pt->tick_zero_time != 0)
         {
-            pt->tick_time += pt->tick_rate * pm->wTimerDelay;
+            pt->tick_time += pt->tick_rate * (int64_t)pm->wTimerDelay;
         }
     }
 
     pm->count ++;
 }
 
-static void forceinline schedule_timer_and_ticker(lm_res_param_t* pm)
+forceinline void schedule_timer_and_ticker(lm_res_param_t* pm)
 {
     int64_t now = 0;
     int64_t tick = 0;
@@ -284,11 +287,20 @@ static void forceinline schedule_timer_and_ticker(lm_res_param_t* pm)
     if( (pm->tm_param.count & 0x7f) == 0)
     {
         tlist = pm->timer_worklist4;
-        //lmice_debug_print("worklist 4 [%lld]\n", tlist[0]->active);
         timer_list_schedule(now, tlist, pm);
 
-
     }
+
+    /*
+    if( (pm->tm_param.count % 1000) == 0)
+    {
+        int64_t cnt = pm->timer_worklist1[0]->active +
+                pm->timer_worklist2[0]->active +
+                pm->timer_worklist3[0]->active +
+                pm->timer_worklist4[0]->active;
+        lmice_critical_print("total timer %lld, [%lld]\n", cnt, pm->tm_param.count);
+    }
+    */
 
     if(tick >0)
     {
@@ -388,7 +400,65 @@ int create_time_thread(lm_res_param_t *pm)
         return 0;
 }
 
-#elif defined(__LINUX__) || defined(__APPLE__)
+#elif defined(__APPLE__)
+
+#include <sys/time.h>
+
+
+static void time_thread_proc(void* dwUser)
+{
+
+    lm_res_param_t *pm = (lm_res_param_t*)dwUser;
+
+
+    /* update time and tick */
+    update_time_and_tick(&pm->tm_param);
+
+    /* resource task proc */
+    resource_task_proc(pm);
+
+    /* schedule timer and ticker */
+    schedule_timer_and_ticker(pm);
+
+
+}
+
+int create_time_thread(lm_res_param_t* pm)
+{
+    lm_timer_ctx_t *ctx = NULL;
+
+    lm_time_param_t*tp =&( pm->tm_param );
+    tp->wTimerDelay = 10000llu;
+    tp->wTimerRes = 10000llu;
+    tp->quit_flag = 0;
+
+    eal_timer_malloc_context(ctx);
+
+    ctx->context = pm;
+    ctx->handler = time_thread_proc;
+    ctx->interval = tp->wTimerDelay;
+    ctx->quit_flag = &(tp->quit_flag);
+
+    return eal_timer_create2(&tp->timer, ctx);
+
+}
+
+int stop_time_thread(lm_res_param_t *pm)
+{
+    lm_time_param_t*tp =&( pm->tm_param );
+    eal_timer_destroy2(tp);
+    /*
+    tp->quit_flag = 1;
+    pthread_join(tp->timer, NULL);
+    */
+    /*
+     * dispatch_release(tp->wTimerID);
+    */
+    return 0;
+}
+
+
+#elif defined(__LINUX__)
 
 
 

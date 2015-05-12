@@ -12,7 +12,7 @@ typedef void*   addr_t;
 #include <sys/mman.h>
 struct lmice_shm_s {
     shmfd_t     fd;
-    int         size;
+    uint32_t    size;
     addr_t      addr;
     char name   [32];
 };

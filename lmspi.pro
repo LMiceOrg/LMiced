@@ -53,5 +53,13 @@ LIBS += -L../lib/boost_1_55_0/stage/lib \
 -L/opt/local/lib
 LIBS += -stdlib=libc++ -lboost_python -lpython2.7
 QMAKE_CXXFLAGS +=  -std=c++11 -stdlib=libc++
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
 #QMAKE_CXXFLAGS += -std=gnu++0x
+QMAKE_CFLAGS += -std=c89 -Weverything
+QMAKE_CFLAGS += -funit-at-a-time -Wno-unused-function -Wall
+QMAKE_CFLAGS += -Dinline=__inline__
+
+QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
+
+QMAKE_POST_LINK = cp liblmspi.dylib lmspi.so
 }

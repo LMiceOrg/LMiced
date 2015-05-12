@@ -3,6 +3,7 @@
 #include "eal/lmice_eal_hash.h"
 #include "eal/lmice_eal_spinlock.h"
 #include "eal/lmice_trace.h"
+#include "eal/lmice_eal_hash.h"
 
 #include "resource_manage.h"
 #include "rtspace.h"
@@ -72,7 +73,7 @@ int forceinline open_timer_resource(lm_res_param_t* pm, lm_timer_res_t* timer)
 
     task.type = LM_RES_TASK_ADD_TIMER;
     task.pval = timer;
-    printf("%p, %lu\n", task.pval, timer->info->size);
+    printf("%p, %ud\n", task.pval, timer->info->size);
     timer->active = LM_TIMER_RUNNING;
     ret = set_resource_task(&task);
     return ret;
@@ -88,7 +89,7 @@ int forceinline close_timer_resource(lm_res_param_t* pm, lm_timer_res_t* timer)
     timer->active = LM_TIMER_DELETE;
     set_resource_task(&task);
 
-    lmice_debug_print("close_timer_resource");
+    lmice_debug_print("close_timer_resource\n");
     return 0;
 
 }
@@ -114,9 +115,6 @@ void forceinline maintain_worker_timer_resource(lm_worker_res_t* worker, lm_res_
             /* the message is destroyed at worker side */
             /* close it at server side */
             close_timer_resource(pm, timer);
-            //lmice_debug_print("maintain_worker_timer_resource\n");
-
-
 
         }
         else if(timer->active == LM_TIMER_NOTUSE
@@ -124,7 +122,6 @@ void forceinline maintain_worker_timer_resource(lm_worker_res_t* worker, lm_res_
         {
             /* the timer is created at worker side */
             /* open it at server side */
-            //lmice_debug_print("a new timer[%lld]\n", timer->info->period);
             open_timer_resource(pm, timer);
 
         }
@@ -292,31 +289,6 @@ int forceinline close_worker_resource(lm_worker_res_t *worker, lm_res_param_t* p
     task.type = LM_RES_TASK_DEL_WORKER;
     task.pval = worker;
     ret = set_resource_task(&task);
-//    size_t i = 0;
-//    lm_mesg_res_t *mesg = NULL;
-//    lm_timer_res_t *timer = NULL;
-//    lm_action_res_t *act = NULL;
-
-//    /* close message, timer, action */
-//    for(i=0; i<128; ++i)
-//    {
-//        mesg = worker->mesg +i;
-//        close_message_resource(mesg);
-//    }
-//    for(i=0; i<128; ++i)
-//    {
-//        timer = worker->timer +i;
-//        close_timer_resource(pm, timer);
-//    }
-//    for(i=0; i<128; ++i)
-//    {
-//        act = worker->action +i;
-//        close_action_resource(act);
-//    }
-
-//    ret = eal_shm_close(worker->res.sfd, worker->res.addr);
-//    worker->res.sfd = 0;
-//    worker->res.addr = 0;
     return ret;
 }
 
@@ -324,9 +296,12 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
 {
     size_t i = 0;
     lm_worker_res_t *worker = NULL;
+    lm_server_t* server = NULL;
+
     lmice_debug_print("call maintain worker resource\n");
-//    lm_server_t* server = (lm_server_t*)pm->res_server.addr;
-    //eal_spin_lock(&server->lock);
+
+    server = (lm_server_t*)pm->res_server.addr;
+    eal_spin_lock(&server->lock);
     for(i=0; i<DEFAULT_CLIENT_SIZE; ++i)
     {
         worker = pm->res_worker +i;
@@ -356,7 +331,7 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
             /* a new worker is created */
             /* so open it at server side */
             open_worker_resource(worker);
-            lmice_critical_print("open_worker_resource[%d:%d]\n", worker->info->process_id, worker->info->thread_id);
+            lmice_critical_print("open_worker_resource[%d:%llu]\n", worker->info->process_id, worker->info->thread_id);
 
 
         }
@@ -364,7 +339,7 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
 
         if(worker->info->state == WORKER_MODIFIED)
         {
-            lmice_debug_print("sync worker[%d:%d] message\n", worker->info->process_id, worker->info->thread_id);
+            lmice_debug_print("sync worker[%d:%llu] message\n", worker->info->process_id, worker->info->thread_id);
 
             /* sync message resource timer and action */
             maintain_worker_message_resource(worker, pm);
@@ -374,8 +349,9 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
         }
 
     }
-    //eal_spin_unlock(&server->lock);
+    eal_spin_unlock(&server->lock);
 }
+#ifdef _WIN32
 
 DWORD WINAPI worker_maintain_thread_proc( LPVOID lpParameter)
 {
@@ -392,6 +368,7 @@ DWORD WINAPI worker_maintain_thread_proc( LPVOID lpParameter)
     }
     return 0;
 }
+
 
 
 /**
@@ -418,12 +395,40 @@ int create_worker_maintain_thread(void* param)
     return 0;
 }
 
+#elif defined(__APPLE__)
+
+static void* worker_maintain_thread_proc(void* param)
+{
+    int ret = 0;
+    lm_res_param_t* pm = (lm_res_param_t*)param;
+    for(;;) {
+        ret = eal_event_wait_one(pm->res_server.efd);
+        if(ret == 0)
+            maintain_worker_resource(pm);
+        else
+            break;
+    }
+    return NULL;
+
+}
+
+static int create_worker_maintain_thread(void* param)
+{
+    pthread_t pt;
+    pthread_create(&pt,
+                   NULL,
+                   worker_maintain_thread_proc,
+                   param);
+    return 0;
+}
+
+#endif
 
 int create_server_resource(lm_shm_res_t* server)
 {
     int ret = 0;
     uint64_t hval = 0;
-    pid_t m_pid = 0;
+    eal_pid_t m_pid = 0;
     lm_server_t *m_server = NULL;
     lmice_event_t   evt;
     lmice_shm_t     shm;
@@ -465,22 +470,44 @@ int create_server_resource(lm_shm_res_t* server)
     server->addr = shm.addr;
     server->efd = evt.fd;
     server->sfd = shm.fd;
+
+    lmice_debug_print("server event [%s] id[%p]\n", evt.name, evt.fd);
     return ret;
 }
 
 int destroy_server_resource(lm_shm_res_t *server)
 {
     int ret = 0;
+    lmice_shm_t shm;
+    lmice_event_t evt;
+    uint64_t hval = 0;
     /* destroy client resource first */
 
-    /* close server event and shm*/
-    ret = eal_event_close(server->efd);
-    if(ret != 0)
-        lmice_critical_print("close server event failed[%d]\n", ret);
+    hval = eal_hash64_fnv1a(BOARD_SHMNAME, sizeof(BOARD_SHMNAME)-1);
 
-    ret = eal_shm_close(server->sfd, server->addr);
-    if(ret != 0)
+    /* close server event and shm*/
+    eal_event_zero(&evt);
+    eal_event_hash_name(hval, evt.name);
+    evt.fd = server->efd;
+    /* lmice_critical_print("eal_event_close[%s] %p\n",evt.name, evt.fd);
+    */
+    ret = eal_event_destroy(&evt);
+    if(ret != 0) {
+        lmice_critical_print("close server event failed[%d]\n", ret);
+    }
+
+    eal_shm_zero(&shm);
+    shm.size = DEFAULT_SHM_SIZE * 2;
+    eal_shm_hash_name(hval, shm.name);
+    shm.fd = server->sfd;
+    shm.addr = server->addr;
+    /*
+     * lmice_critical_print("eal_shm_close[%s] %d",shm.name, shm.fd);
+    */
+    ret = eal_shm_destroy(&shm);
+    if(ret != 0) {
         lmice_critical_print("close server shm failed[%d]\n", ret);
+    }
 
     return ret;
 }
@@ -534,8 +561,7 @@ int create_resource_service(lm_res_param_t* pm)
         lmice_critical_print("Create server resource shm failed[%d]\n", ret);
         return 1;
     }
-    /* 初始化资源信息*/
-    //printf("init server resource\n");
+    /* 初始化资源信息*/    
     init_server_resource(pm);
 
     /* 启动工作实例资源维护服务 */
@@ -553,56 +579,12 @@ int destroy_resource_service(lm_res_param_t* pm)
     return ret;
 }
 
-//#include <jansson.h>
 
-//const char* data_path = "data";
-
-//int lmice_dump_resource_file()
-//{
-
-//    //TODO: server runtime --> instance scenario --> config --> data-path
-
-//    //Dump scenario list json(id, type, owner)
-//    const char* scen_temp = "\t{\n\t\tid:%lld\n\t\ttype:%lld\n\t\towner:%lld\n\t}\n";
-//    char path[256]={0};
-//    strcat(path, data_path);
-//    strcat(path, "\\scenlist.log");
-//    FILE* fp = fopen(path, "w");
-//    if(!fp)
-//        return errno;
-//    setvbuf(fp, NULL, _IOFBF, 1024);
-//    fwrite("[\n", 1, 2, fp);
-//    fprintf(fp, scen_temp, 0, 1, 1);
-//    fwrite("]\n", 1, 2, fp);
-//    fflush(fp);
-//    fclose(fp);
-
-//    return 0;
-//}
-
-//int lmice_load_resource_file()
-//{
-//    char path[256]={0};
-//    strcat(path, data_path);
-//    strcat(path, "\\scenlist.log");
-
-//    json_error_t err;
-//    json_t *root;
-//    FILE* fp = fopen(path, "r");
-//    if(!fp)
-//        return errno;
-
-//    root = json_loadf(fp, 0, &err);
-
-//    fclose(fp);
-
-//}
-lm_res_task_t g_restask[128] = {0};
-volatile int64_t g_reslock = 0;
+static lm_res_task_t g_restask[128];
+static volatile int64_t g_reslock = 0;
 int peek_resource_task(lm_res_task_t* task)
 {
     int ret = 0;
-//    int64_t result = 1;
     ret = eal_spin_trylock(&g_reslock);
     if(ret !=0)
         return ret;
@@ -616,7 +598,6 @@ int peek_resource_task(lm_res_task_t* task)
     }
 
     eal_spin_unlock(&g_reslock);
-    //g_reslock = 0;
     return 0;
 }
 #define RES_TASKLIST_SIZE 128
@@ -656,5 +637,8 @@ int remove_worker_from_res(lm_res_param_t* pm, lm_worker_res_t* worker)
     int ret = 0;
 
     ret = remove_timer_by_worker(pm, worker);
+
+    worker->info->inst_id = 0;
+    worker->info->state = 0;
     return ret;
 }
