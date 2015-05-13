@@ -1,4 +1,4 @@
-﻿#ifndef RESOURCE_MANAGE_H
+#ifndef RESOURCE_MANAGE_H
 #define RESOURCE_MANAGE_H
 
 /** 资源包括:
@@ -310,6 +310,8 @@ struct lmice_time_parameter_s
     UINT        wTimerRes;
     UINT        wTimerDelay;
     uint64_t    count;
+    HANDLE      timer;
+    volatile int64_t quit_flag;
 
 };
 #elif defined(__APPLE__) || defined(__BSD__)

@@ -146,7 +146,7 @@ DWORD WINAPI ServerSendThread(LPVOID IpParam);
 
 
 
-static int forceinline create_iocp_handle(HANDLE* cp)
+int forceinline create_iocp_handle(HANDLE* cp)
 {
     int ret = 0;
     DWORD err = 0;
@@ -161,7 +161,7 @@ static int forceinline create_iocp_handle(HANDLE* cp)
     return ret;
 }
 
-static int forceinline create_worker_thread(int count, HANDLE cp)
+int forceinline create_worker_thread(int count, HANDLE cp)
 {
     int ret = 0;
     int i=0;

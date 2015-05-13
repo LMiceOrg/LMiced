@@ -80,6 +80,21 @@ forceinline void trust_resource_compute(lm_trust_t* pt) {
 }
 
 
+int create_trust_thread(lm_trust_t* pt)
+{
+    lm_timer_ctx_t *ctx = NULL;
+    pt->wTimerDelay = TRUST_PERIOD_MSEC * 10000ull;
+    pt->wTimerRes = TRUST_RESOLUTION_MSEC * 10000ull;
+
+    eal_timer_malloc_context(ctx);
+    ctx->context = pt;
+    ctx->handler = trust_resource_compute;
+    ctx->interval = pt->wTimerDelay;
+    ctx->quit_flag = &(pt->quit_flag);
+    return eal_timer_create2(&(pt->timer), ctx);
+}
+#if defined(USE_MMTIMER)
+
 void CALLBACK trust_thread_proc(UINT wTimerID, UINT msg,
                                 DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
@@ -131,6 +146,7 @@ int create_trust_thread(lm_trust_t* pt)
     else
         return 0;
 }
+#endif
 
 #elif defined(__APPLE__)
 
@@ -212,11 +228,12 @@ int create_trust_thread(lm_trust_t* pt)
     return eal_timer_create2(&(pt->timer), ctx);
 }
 
+
+#endif
+
 int stop_trust_thread(lm_trust_t* pt)
 {
     eal_timer_destroy2(pt);
 
     return 0;
 }
-
-#endif

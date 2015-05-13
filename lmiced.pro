@@ -7,7 +7,8 @@ SOURCES += main.c \
 timer/timer_system_time.c \
 resource/resouce_manage.c \
     trust/trust_manage.c \
-    schedule/action_schedule.c
+    schedule/action_schedule.c \
+    net/net_beatheart.c
 #    net/net_manage.c
 #    main.cpp \
 #    resource/resource_shm.cpp \
@@ -32,7 +33,8 @@ resource/resource_manage.h \
 trust/trust_manage.h \
     schedule/action_schedule.h \
     net/net_manage.h \
-    net/net_manage_win.h
+    net/net_manage_win.h \
+    net/net_beatheart.h
 #    system/system_environment.h \
 #    system/system_signal.h \
 #    system/system_environment_internal.h \
@@ -81,6 +83,8 @@ DEFINES += inline=__inline
 QMAKE_CFLAGS_WARN_ON    = /W4
 QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG -D_CRT_SECURE_NO_WARNINGS
 
+QMAKE_CFLAGS_DEBUG -= -MDd
+QMAKE_CFLAGS_RELEASE -= -MD
 QMAKE_CFLAGS_DEBUG += /MTd /O2 -DSTDC89
 QMAKE_CFLAGS_RELEASE += /MT /O2 -DSTDC89
 

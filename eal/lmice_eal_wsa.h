@@ -1,4 +1,4 @@
-﻿#ifndef LMICE_EAL_WSA_H
+#ifndef LMICE_EAL_WSA_H
 #define LMICE_EAL_WSA_H
 
 /* Windows Socket Library API */
@@ -38,7 +38,7 @@ struct eal_wsa_handle_list_s
 {
     volatile int64_t lock;
     struct eal_wsa_handle_list_s *next;
-#if !defined(_W64)
+#if !defined(_WIN64)
     uint32_t padding0;
 #endif
     eal_wsa_handle data[EAL_WSA_HANDLE_LIST_LENGTH];
@@ -115,22 +115,39 @@ forceinline void eal_wsa_remove_handle(eal_wsa_handle* bt)
 
 struct eal_wsa_service_param_s
 {
-    /* 0 client-mode, 1 server-mode */
+    /* [in] 0 client-mode, 1 server-mode  */
     int mode;
-    /* ipv4, ipv6 */
+    /* [in/out] ipv4, ipv6 */
     int inet;
-    /* Empty - any available port */
+    /* processed by getaddrinfo-bind routine
+     * [in] local socket port
+     * [in] local socket address
+     * Empty - any available port
+     *       - any available address
+     */
     char local_port[8];
-    /* Empty - any available address */
     char local_addr[64];
+    /* processed by
+     * TCP-connect routine,
+     * UDP-send routine
+     * MC-add-membership routine
+     * [in] remote socket port
+     * [in] remote socket address
+     * Empty - any available port
+     *       - any available address
+     */
     char remote_port[8];
     char remote_addr[64];
 
+    /* [in] global wsa handle list */
     eal_wsa_handle_list *hlist;
+    /* [in] global iocp data list */
     eal_iocp_data_list *ilist;
+    /* [out] the wsa handle to be created from global list*/
     eal_wsa_handle* hd ;
+    /* [out] the iocp data to be created from global list */
     eal_iocp_data* data;
-
+    /* [in] the i/o event-process handle */
     HANDLE  cp;
 
 };

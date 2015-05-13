@@ -5,6 +5,25 @@
 #include <time.h>
 #include <stdint.h>
 
+struct lmice_timer_context_s {
+    /* 100x nano-seconds */
+    uint64_t interval;
+    /* =1 quit */
+    volatile int64_t* quit_flag;
+    /* callback function pointer */
+    void (*handler) (void*);
+    /* callback parameter */
+    void* context;
+};
+typedef struct lmice_timer_context_s lm_timer_ctx_t;
+
+#define eal_timer_malloc_context(ctx) \
+    ctx = (lm_timer_ctx_t*)malloc(sizeof(lm_timer_ctx_t));
+
+#define eal_timer_free_context(ctx) \
+    free(ctx); \
+
+
 #if defined(__MACH__)
 
 #include <mach/clock.h>
@@ -29,27 +48,8 @@ forceinline int  get_system_time(int64_t* t) {
     return 0;
 }
 
-struct lmice_timer_context_s {
-    /* 100x nano-seconds */
-    uint64_t interval;
-    /* =1 quit */
-    volatile int64_t* quit_flag;
-    /* callback function pointer */
-    void (*handler) (void*);
-    /* callback parameter */
-    void* context;
-};
-typedef struct lmice_timer_context_s lm_timer_ctx_t;
-
 void* eal_timer_thread(void*);
 
-#define eal_timer_malloc_context(ctx) do {\
-    ctx = (lm_timer_ctx_t*)malloc(sizeof(lm_timer_ctx_t)); \
-    } while(0)
-
-#define eal_timer_free_context(ctx) do {\
-    free(ctx); \
-    } while(0)
 
 #define eal_timer_destroy2(ctx) do {\
     ctx->quit_flag = 1; \

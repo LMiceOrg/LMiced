@@ -335,6 +335,7 @@ forceinline void schedule_timer_and_ticker(lm_res_param_t* pm)
 
 #if defined(_WIN32)
 
+#if defined(USE_MMTIMER)
 /* 1-millisecond target resolution */
 #define MMTIME_RESOLUTION 1
 
@@ -399,6 +400,56 @@ int create_time_thread(lm_res_param_t *pm)
     else
         return 0;
 }
+
+#else /* Dont use MMTIMER */
+
+static void time_thread_proc(void* dwUser)
+{
+
+    lm_res_param_t *pm = (lm_res_param_t*)dwUser;
+
+
+    /* update time and tick */
+    update_time_and_tick(&pm->tm_param);
+
+    /* resource task proc */
+    resource_task_proc(pm);
+
+    /* schedule timer and ticker */
+    schedule_timer_and_ticker(pm);
+
+
+}
+
+int create_time_thread(lm_res_param_t* pm)
+{
+    lm_timer_ctx_t *ctx = NULL;
+
+    lm_time_param_t*tp =&( pm->tm_param );
+    tp->wTimerDelay = 20000llu;
+    tp->wTimerRes = 10000llu;
+    tp->quit_flag = 0;
+
+    eal_timer_malloc_context(ctx);
+
+    ctx->context = pm;
+    ctx->handler = time_thread_proc;
+    ctx->interval = tp->wTimerDelay;
+    ctx->quit_flag = &(tp->quit_flag);
+
+    return eal_timer_create2(&tp->timer, ctx);
+
+}
+
+int stop_time_thread(lm_res_param_t *pm)
+{
+    lm_time_param_t*tp =&( pm->tm_param );
+    eal_timer_destroy2(tp);
+    return 0;
+}
+
+
+#endif /* USE_MMTIMER */
 
 #elif defined(__APPLE__)
 

@@ -46,5 +46,27 @@ int forceinline ctime_r(const time_t* tm, char* time)
     return ctime_s(time, 26, tm);
 }
 
+DWORD WINAPI eal_timer_thread(LPVOID param);
+
+void QueryTimerResolution(void);
+
+forceinline int eal_timer_create2(HANDLE *timer, lm_timer_ctx_t* ctx)
+{
+    *timer = CreateThread(NULL, 0 , eal_timer_thread, ctx, 0, NULL);
+    if(*timer)
+        return 0;
+    return 1;
+}
+
+#define eal_timer_destroy2(ctx) \
+    ctx->quit_flag = 1; \
+    WaitForSingleObject(ctx->timer, INFINITE); \
+    CloseHandle(ctx->timer);\
+    ctx->timer = NULL;
+
+
+
+
+
 #endif /** LMICE_EAL_TIME_WIN_H */
 

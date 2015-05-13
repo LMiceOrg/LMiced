@@ -1,4 +1,4 @@
-﻿#ifndef LMICE_EAL_IOCP_H
+#ifndef LMICE_EAL_IOCP_H
 #define LMICE_EAL_IOCP_H
 
 #include "lmice_trace.h"
@@ -32,9 +32,7 @@ struct eal_iocp_data_s
 {
     uint64_t inst_id;
     int operation;
-#if defined(WIN64)
-    int padding0;
-#endif
+    int quit_flag;
     WSABUF data;
     OVERLAPPED overlapped;
     DWORD recv_bytes;

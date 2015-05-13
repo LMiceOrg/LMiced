@@ -2,6 +2,8 @@
 #define RTSPACE_H
 
 #define LMICE_VERSION 1
+#define LMICE_NAME "LMice"
+#define LMICE_PADDING_DEFAULT 8
 
 
 enum lmice_error_code_e

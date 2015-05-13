@@ -15,6 +15,8 @@ struct lmice_trust_s
     MMRESULT    wTimerID;
     UINT        wTimerRes;
     UINT        wTimerDelay;
+    HANDLE      timer;
+    volatile int64_t    quit_flag;
 };
 #elif defined(__LINUX__)
 
