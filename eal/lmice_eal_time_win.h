@@ -9,6 +9,10 @@
     msdn.microsoft.com/en-us/magazine/cc163996.aspx
     Implement a Continuously Updating, High-Resolution Time Provider for Windows
 */
+forceinline int eal_time_factor(uint64_t* factor) {
+    *factor = 1;
+    return 0;
+}
 
 int forceinline get_system_time(int64_t* t)
 {

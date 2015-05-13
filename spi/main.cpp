@@ -1,4 +1,4 @@
-﻿#include "lmspi_cxx.h"
+#include "lmspi_cxx.h"
 
 LMspi::~LMspi()
 {
@@ -272,7 +272,7 @@ int lmice_spi::open_server_resource()
     lmice_shm_t     shm;
 
 
-    /*打开平台公共区域共享内存*/
+    /* 打开平台公共区域共享内存 */
     eal_shm_zero(&shm);
     hval = eal_hash64_fnv1a(BOARD_SHMNAME, sizeof(BOARD_SHMNAME)-1);
     eal_shm_hash_name(hval, shm.name);
@@ -286,7 +286,7 @@ int lmice_spi::open_server_resource()
     //m_shmvec.push_back(shm);
 
 
-    /*打开公共区域管理事件*/
+    /* 打开公共区域管理事件 */
     eal_event_zero(&evt);
     eal_event_hash_name(hval, evt.name);
     ret = eal_event_open(&evt);
@@ -321,21 +321,21 @@ int lmice_spi::init()
 {
     int ret;
 
-    //避免重复初始化
+    // 避免重复初始化
     if( m_worker != 0
             && m_server != 0)
         return 0;
 
-    //默认session_id = 0
+    // 默认session_id = 0
     m_session_id = DEFAULT_SESSION_ID;
 
-    //默认type id = 0
+    // 默认type id = 0
     m_type_id = 0;
 
-    //获取当前进程ID
+    // 获取当前进程ID
     m_process_id = getpid();
 
-    //线程ID
+    // 线程ID
     m_thread_id = eal_gettid();
 //    pthread_t pt = pthread_self();
 //    t = pthread_mach_thread_np(pt);
@@ -358,21 +358,21 @@ int lmice_spi::init()
 
     m_res = new lm_worker_res_t;
 
-    //打开平台公共区域共享内存
+    // 打开平台公共区域共享内存
     ret = open_server_resource();
 
-    //新建客户端共享内存区域
+    // 新建客户端共享内存区域
     ret = create_worker_resource();
 
-    //注册客户端信息到平台
+    // 注册客户端信息到平台
     do {
-        lm_worker_info_t info={LMICE_VERSION,
-                               WORKER_MODIFIED,
-                               m_process_id,
-                               0,//padding
-                               m_thread_id,
-                               m_type_id,
-                               m_inst_id};
+        lm_worker_info_t info;
+        info.version = LMICE_VERSION;
+        info.state =WORKER_MODIFIED;
+        info.process_id = m_process_id;
+        info.thread_id = m_thread_id;
+        info.type_id = m_type_id;
+        info.inst_id = m_inst_id;
         //        info.version = LMICE_VERSION;
         //        info.size = DEFAULT_SHM_SIZE;
         //        info.process_id = m_pid;
@@ -392,7 +392,7 @@ int lmice_spi::init()
         }
         eal_spin_unlock(&m_server->lock);
 
-        //唤醒平台管理
+        // 唤醒平台管理
         //eal_event_awake(res_server.efd);
 
     } while(0);
@@ -400,7 +400,7 @@ int lmice_spi::init()
     return 0;
 }
 
-//加入场景
+// 加入场景
 int lmice_spi::join_session(uint64_t session_id)
 {
     m_session_id = session_id;
@@ -408,14 +408,15 @@ int lmice_spi::join_session(uint64_t session_id)
 
     int64_t timetm, timetm2;
     uint64_t factor = 1;
-    eal_init_timei(&factor);
+    eal_time_factor(&factor);
     get_system_time(&timetm);
     get_system_time(&timetm2);
     lmice_critical_print("current factor[%llu] time %lld\n",factor, timetm2*factor - timetm*factor);
     return 0;
+
 }
 
-//退出场景
+// 退出场景
 int lmice_spi::leave_session(uint64_t session_id)
 {
     UNREFERENCED_PARAM(session_id);
@@ -442,7 +443,7 @@ int lmice_spi::register_publish(const char *type, const char *inst, int size, ui
     inst_id = eal_hash64_more_fnv1a(inst, strlen(inst), inst_id);
 
     type_id = eal_hash64_fnv1a(type, strlen(type));
-    //创建资源
+    // 创建资源
     lm_mesg_res_t *res = NULL;
     lm_mesg_info_t *info = NULL;
     size_t i = 0;
@@ -489,7 +490,7 @@ int lmice_spi::register_publish(const char *type, const char *inst, int size, ui
 
     *event_id = inst_id;
 
-    //注册IPC信息,通知平台更新
+    // 注册IPC信息,通知平台更新
     lmice_debug_print("pub inst %llu\n", inst_id);
 
     return 0;
@@ -508,7 +509,7 @@ int lmice_spi::register_subscribe(const char* type, const char* inst, uint64_t *
 
     type_id = eal_hash64_fnv1a(type, strlen(type));
 
-    //创建资源
+    // 创建资源
     lm_mesg_res_t *res = NULL;
     lm_mesg_info_t *info = NULL;
     size_t i = 0;
@@ -551,7 +552,7 @@ int lmice_spi::register_subscribe(const char* type, const char* inst, uint64_t *
 
     *event_id = inst_id;
 
-    //注册IPC信息,通知平台更新
+    // 注册IPC信息,通知平台更新
     lmice_debug_print("sub inst %llu\n", inst_id);
 
     return 0;
@@ -568,7 +569,7 @@ int lmice_spi::register_tick_event(int period, int size, int due, uint64_t* even
     inst_id = eal_hash64_more_fnv1a(&period, sizeof(period), inst_id);
     inst_id = eal_hash64_more_fnv1a(&size, sizeof(size), inst_id);
 
-    //创建资源
+    // 创建资源
     lm_timer_info_t *info = NULL;
     lm_timer_res_t  *res  = NULL;
     size_t i = 0;
@@ -597,7 +598,7 @@ int lmice_spi::register_tick_event(int period, int size, int due, uint64_t* even
         return 1; //No Found
 
 
-    //    //资源事件
+    //    // 资源事件
     //    lmice_event_t evt;
     //    eal_event_zero(&evt);
     //    eal_event_hash_name(hval, evt.name);
@@ -621,7 +622,7 @@ int lmice_spi::register_tick_event(int period, int size, int due, uint64_t* even
 
     *event_id = inst_id;
 
-    //注册IPC信息,通知平台更新
+    // 注册IPC信息,通知平台更新
     return 0;
 }
 
@@ -636,7 +637,7 @@ int lmice_spi::register_timer_event(int period, int size, int due, uint64_t* eve
     inst_id = eal_hash64_more_fnv1a(&period, sizeof(period), inst_id);
     inst_id = eal_hash64_more_fnv1a(&size, sizeof(size), inst_id);
 
-    //创建资源
+    // 创建资源
     lm_timer_info_t *info = NULL;
     lm_timer_res_t  *res  = NULL;
     size_t i = 0;
@@ -667,7 +668,7 @@ int lmice_spi::register_timer_event(int period, int size, int due, uint64_t* eve
         return 1; //No Found
 
 
-    //    //资源事件
+    //    // 资源事件
     //    lmice_event_t evt;
     //    eal_event_zero(&evt);
     //    eal_event_hash_name(inst_id, evt.name);
@@ -708,7 +709,7 @@ int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t
         inst_id = eal_hash64_more_fnv1a((event_list+sz), sizeof(uint64_t), inst_id);
     }
 
-    //创建资源
+    // 创建资源
     lm_action_info_t *info = NULL;
     lm_action_res_t  *res  = NULL;
     size_t i = 0;
@@ -736,7 +737,7 @@ int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t
     if(!find )
         return 1; //No Found
 
-    //    //资源事件
+    //    // 资源事件
     //    lmice_event_t evt;
     //    eal_event_zero(&evt);
     //    eal_event_hash_name(hval, evt.name);
@@ -758,7 +759,7 @@ int lmice_spi::register_custom_event(uint64_t* event_list, size_t size, uint64_t
 
     *event_id = inst_id;
 
-    //注册IPC信息,通知平台更新
+    // 注册IPC信息,通知平台更新
 
     return 0;
 }
@@ -956,7 +957,7 @@ int lmspi_commit(lmspi_t spi)
     return s->commit();
 }
 
-//场景管理
+// 场景管理
 int lmspi_join_session(lmspi_t spi, uint64_t session_id)
 {
     lmice_spi* s = (lmice_spi*)spi;
@@ -969,7 +970,7 @@ int lmspi_leave_session(lmspi_t spi, uint64_t session_id)
     return s->leave_session(session_id);
 }
 
-//资源注册
+// 资源注册
 int lmspi_register_publish(lmspi_t spi, const char* type, const char* inst, int size, uint64_t *event_id)
 {
     lmice_spi* s = (lmice_spi*)spi;
@@ -982,7 +983,7 @@ int lmspi_register_subscribe(lmspi_t spi, const char* type, const char* inst, ui
     return s->register_subscribe(type, inst, event_id);
 }
 
-//事件管理
+// 事件管理
 int lmspi_register_tick_event(lmspi_t spi, int period, int size, int due, uint64_t* event_id)
 {
     lmice_spi* s = (lmice_spi*)spi;
@@ -1001,7 +1002,7 @@ int lmspi_register_custom_event(lmspi_t spi, uint64_t* event_list, size_t count,
     return s->register_custom_event(event_list, count, event_id);
 }
 
-//基于ID的回调函数管理
+// 基于ID的回调函数管理
 int lmspi_register_callback(lmspi_t spi, uint64_t id, lmice_event_callback *callback)
 {
     lmice_spi* s = (lmice_spi*)spi;
@@ -1014,7 +1015,7 @@ int lmspi_unregister_callback(lmspi_t spi, uint64_t id, lmice_event_callback *ca
     return s->unregister_callback(id, callback);
 }
 
-//可信计算,QoS管理
+// 可信计算,QoS管理
 int lmspi_set_tc_level(lmspi_t spi, int level)
 {
     lmice_spi* s = (lmice_spi*)spi;
@@ -1027,7 +1028,7 @@ int lmspi_set_qos_level(lmspi_t spi, int level)
     return s->set_qos_level(level);
 }
 
-//阻塞运行与资源回收
+// 阻塞运行与资源回收
 int lmspi_join(lmspi_t spi)
 {
     lmice_spi* s = (lmice_spi*)spi;

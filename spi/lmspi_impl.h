@@ -46,26 +46,26 @@ public:
     int init();
     int commit();
 
-    //场景管理
+    // 场景管理
     int join_session(uint64_t session_id);
     int leave_session(uint64_t session_id);
-    //资源注册
+    // 资源注册
     int register_publish(const char* type, const char* inst, int size, uint64_t *event_id);
     int register_subscribe(const char* type, const char* inst, uint64_t* event_id);
-    //事件管理
+    // 事件管理
     int register_tick_event(int period, int size, int due, uint64_t* event_id);
     int register_timer_event(int period, int size, int due, uint64_t* event_id);
     int register_custom_event(uint64_t* event_list, size_t count, uint64_t* event_id);
 
-    //基于ID的回调函数管理
+    // 基于ID的回调函数管理
     int register_callback(uint64_t id, lmice_event_callback *callback);
     int unregister_callback(uint64_t id, lmice_event_callback *callback);
 
-    //可信计算,QoS管理
+    // 可信计算,QoS管理
     int set_tc_level(int level);
     int set_qos_level(int level);
 
-    //阻塞运行与资源回收
+    // 阻塞运行与资源回收
     int join();
 
 

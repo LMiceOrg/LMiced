@@ -3,15 +3,15 @@
 
 #include "lmice_eal_common.h"
 
-forceinline static int
-eal_is_little_endian()
+forceinline int
+eal_is_little_endian(void)
 {
     unsigned short ed = 0x0001;
     return (char)ed;
 }
 
-forceinline static int
-eal_is_big_endian()
+forceinline int
+eal_is_big_endian(void)
 {
     unsigned short ed = 0x0100;
 

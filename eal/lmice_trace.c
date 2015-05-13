@@ -11,12 +11,12 @@ const int lmice_trace_debug_mode = 0;
 
 lmice_trace_name_t lmice_trace_name[] =
 {
-    {lmice_trace_info,      "INFO",     10 /* light_green*/},
-    {lmice_trace_debug,     "DEBUG",    11 /* light_cyan */},
-    {lmice_trace_warning,   "WARNING",  14 /*yellow*/},
-    {lmice_trace_error,     "ERROR",    12 /*light_red*/},
-    {lmice_trace_critical,  "CRITICAL", 13 /* light_purple*/},
-    {lmice_trace_none,      "NULL",     7 /* white */}
+    {lmice_trace_info,     10,0,      "INFO" /* light_green*/},
+    {lmice_trace_debug,    11,0,     "DEBUG" /* light_cyan */},
+    {lmice_trace_warning,  14,0,   "WARNING" /*yellow*/},
+    {lmice_trace_error,    12,0,     "ERROR" /*light_red*/},
+    {lmice_trace_critical, 13,0,  "CRITICAL" /* light_purple*/},
+    {lmice_trace_none,     7,0,       "NULL" /* white */}
 };
 #else
 
@@ -32,32 +32,48 @@ lmice_trace_name_t lmice_trace_name[] =
 
 #endif
 
+#define EAL_TRACE_0() \
+    int _trace_ret; \
+    time_t _trace_tm;   \
+    char _trace_current_time[26]; \
+    char _trace_thread_name[32]; \
+    if(lmice_trace_debug_mode == 0 && type == lmice_trace_debug) \
+        return; \
+    time(&_trace_tm); \
+    ctime_r(&_trace_tm, _trace_current_time); \
+    /*change newline to space */ \
+    _trace_current_time[24] = ' '; \
+    _trace_ret = pthread_getname_np(eal_gettid(), _trace_thread_name, 32); \
+    if(_trace_ret == 0) { \
+        if( strlen(_trace_thread_name) == 0) _trace_ret = -1; \
+        else _trace_ret = 0; \
+    }
+
+#define EAL_TRACE_WIN32() \
+    printf(_trace_current_time); \
+    LMICE_TRACE_COLOR_TAG3(type); \
+    if(_trace_ret == 0) {   \
+        printf(":[%d:%s]", getpid(), _trace_thread_name); \
+    } else {    \
+        printf(":[%d:0x%llx]", getpid(), eal_gettid()); \
+    }
+
+#define EAL_TRACE_UNIX() \
+    if(_trace_ret == 0) {   \
+        printf("%s%s%s%s:[%d:%s]",  \
+            _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), _trace_thread_name); \
+    } else { \
+        printf("%s%s%s%s:[%d:0x%llx]",    \
+            _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), eal_gettid()); \
+    }
 
 void eal_trace_color_print_per_thread(int type)
 {
-    int _trace_ret;
-    time_t _trace_tm;
-    char _trace_current_time[26];
-    char _trace_thread_name[32];
-    if(lmice_trace_debug_mode == 0 && type == lmice_trace_debug)
-        return;
-    time(&_trace_tm);
-    ctime_r(&_trace_tm, _trace_current_time);
-    /*change newline to space */
-    _trace_current_time[24] = ' ';
-    _trace_ret = pthread_getname_np(pthread_self(), _trace_thread_name, 32);
-    if(_trace_ret == 0) {
-        if( strlen(_trace_thread_name) == 0) _trace_ret = -1;
-        else _trace_ret = 0;
-    }
-
-    if(_trace_ret == 0) {
-        printf("%s%s%s%s:[%d:%s]"
-               ,
-            _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), _trace_thread_name);
-    } else {
-        printf("%s%s%s%s:[%d:0x%p]",
-            _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), pthread_self());
-    }
+    EAL_TRACE_0();
+#if defined(_WIN32)
+    EAL_TRACE_WIN32();
+#else /* UNIX */
+    EAL_TRACE_UNIX();
+#endif
 }
 

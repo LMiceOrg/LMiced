@@ -24,11 +24,13 @@ enum lmice_trace_type_e
 
 typedef enum lmice_trace_type_e lmice_trace_type_t;
 
-#ifdef _WIN32
+#if defined(_WIN32)
 struct lmice_trace_name_s {
     lmice_trace_type_t type;
-    char name[16];
     WORD color;
+    WORD padding;
+    char name[16];
+
 };
 #define LMICE_TRACE_COLOR_TAG3(type) \
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), lmice_trace_name[type].color); \
@@ -50,8 +52,13 @@ typedef struct lmice_trace_name_s lmice_trace_name_t;
 extern const int lmice_trace_debug_mode;
 extern lmice_trace_name_t lmice_trace_name[];
 
+void eal_trace_color_print_per_thread(int type);
+
+#define EAL_TRACE_COLOR_PRINT_THREAD(x)  eal_trace_color_print_per_thread(lmice_trace_##x);printf
+
 #if defined(_WIN32)
 
+/*
 #define LMICE_TRACE_COLOR_PRINT(type, format, ...) do{ \
     char current_time[26];  \
     time_t tm;  \
@@ -59,7 +66,6 @@ extern lmice_trace_name_t lmice_trace_name[];
         break; \
     time(&tm);  \
     ctime_r(&tm, current_time); \
-    /*change newline to space */    \
     current_time[24] = ' '; \
     printf(current_time); \
     LMICE_TRACE_COLOR_TAG3(type) \
@@ -97,15 +103,11 @@ extern lmice_trace_name_t lmice_trace_name[];
         printf("\n"); \
     }   \
     }while (0);
-
+*/
 
 
 #else /** Posix */
 
-
-void eal_trace_color_print_per_thread(int type);
-
-#define EAL_TRACE_COLOR_PRINT_THREAD(x)  eal_trace_color_print_per_thread(lmice_trace_##x);printf
 
 /*
 #define LMICE_TRACE_COLOR_PRINT(type, format, ...) do{ \
@@ -182,6 +184,7 @@ void eal_trace_color_print_per_thread(int type);
     } while(0);
 
 */
+
 #endif
 
 

@@ -183,7 +183,7 @@ int eal_shm_open_readwrite(lmice_shm_t* shm)
 
 #elif defined(_WIN32)
 
-static forceinline
+forceinline
 int eal_shm_open_with_mode(lmice_shm_t* shm, int mode)
 {
 
@@ -321,27 +321,27 @@ int eal_shm_open_readwrite(lmice_shm_t* shm)
 
 #endif
 
-forceinline
-void hash_to_nameA(uint64_t hval, char* name)
-{
-    int i=0;
-    const char* hex_list="0123456789ABCDEF";
-    for(i=0; i<8; ++i)
-    {
-        name[i*2] = hex_list[ *( (uint8_t*)&hval+i) >> 4];
-        name[i*2+1] = hex_list[ *( (uint8_t*)&hval+i) & 0xf ];
-    }
+#define Mhash_to_nameA(hval, name) { \
+    int i=0;    \
+    const char* hex_list="0123456789ABCDEF"; \
+    for(i=0; i<8; ++i) \
+    { \
+        name[i*2] = hex_list[ *( (uint8_t*)&hval+i) >> 4]; \
+        name[i*2+1] = hex_list[ *( (uint8_t*)&hval+i) & 0xf ]; \
+    } \
 }
 
 int eal_shm_hash_name(uint64_t hval, char *name)
 {
 #if defined(_WIN32)
     memcpy(name, "Global\\sm", 9);
-    hash_to_nameA(hval, name+9);
+    name += 9;
+    Mhash_to_nameA(hval, name);
     name[25]='\0';
 #else
     memcpy(name, "sm", 2);
-    hash_to_nameA(hval, name+2);
+    name += 2;
+    Mhash_to_nameA(hval, name);
     name[18]='\0';
 #endif
 

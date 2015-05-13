@@ -5,8 +5,13 @@
 
 #include <stdint.h>
 
+#if defined(_WIN32)
+typedef uint32_t eal_tid_t;
+typedef int32_t  eal_pid_t;
+#else
 typedef uint64_t eal_tid_t;
 typedef int32_t  eal_pid_t;
+#endif
 
 #if defined(__LINUX__) || defined(USE_POSIX_THREAD)
 
@@ -26,7 +31,6 @@ forceinline eal_tid_t eal_gettid()
 
 
 #elif defined(_WIN32) && defined(_MSC_VER) /** MSC */
-
     #include "lmice_eal_thread_win.h"
     #define Thread __declspec( thread )
 

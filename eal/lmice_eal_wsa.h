@@ -26,6 +26,9 @@ struct eal_wsa_handle_s
     uint64_t inst_id;
     SOCKET nfd;
     int addrlen;
+#if defined(WIN64)
+    int padding0;
+#endif
     SOCKADDR_STORAGE addr;
 };
 typedef struct eal_wsa_handle_s eal_wsa_handle;
@@ -43,7 +46,7 @@ struct eal_wsa_handle_list_s
 typedef struct eal_wsa_handle_list_s eal_wsa_handle_list;
 
 
-forceinline static int eal_wsa_create_handle_list(eal_wsa_handle_list** pb)
+forceinline int eal_wsa_create_handle_list(eal_wsa_handle_list** pb)
 {
     *pb = (eal_wsa_handle_list*)malloc( sizeof(eal_wsa_handle_list) );
     if(*pb == NULL)
@@ -52,7 +55,7 @@ forceinline static int eal_wsa_create_handle_list(eal_wsa_handle_list** pb)
     return 0;
 }
 
-forceinline static void eal_wsa_destroy_handle_list(eal_wsa_handle_list* pb)
+forceinline void eal_wsa_destroy_handle_list(eal_wsa_handle_list* pb)
 {
     eal_wsa_handle_list *next = NULL;
     do {
@@ -63,7 +66,7 @@ forceinline static void eal_wsa_destroy_handle_list(eal_wsa_handle_list* pb)
 }
 
 
-forceinline static int eal_wsa_append_handle(eal_wsa_handle_list* pb, uint64_t inst_id, eal_wsa_handle** data)
+forceinline int eal_wsa_append_handle(eal_wsa_handle_list* pb, uint64_t inst_id, eal_wsa_handle** data)
 {
     size_t i=0;
     eal_wsa_handle_list *next = NULL;
@@ -104,7 +107,7 @@ forceinline static int eal_wsa_append_handle(eal_wsa_handle_list* pb, uint64_t i
 
 }
 
-forceinline static void eal_wsa_remove_handle(eal_wsa_handle* bt)
+forceinline void eal_wsa_remove_handle(eal_wsa_handle* bt)
 {
     bt->inst_id = 0;
 }
@@ -139,7 +142,7 @@ typedef DWORD  (WINAPI *eal_wsa_tcp_accept_thread_proc_t) ( LPVOID lpParameter);
 
 DWORD WINAPI eal_wsa_tcp_accept_thread_proc( LPVOID lpParameter);
 
-forceinline static int eal_create_tcp_accept_thread(eal_wsa_service_param * pm,
+forceinline int eal_create_tcp_accept_thread(eal_wsa_service_param * pm,
                                                     eal_wsa_tcp_accept_thread_proc_t thread_proc)
 {
     int ret = 0;
@@ -158,7 +161,7 @@ forceinline static int eal_create_tcp_accept_thread(eal_wsa_service_param * pm,
     return ret;
 }
 
-forceinline static void eal_wsa_hash(int mode, const char* local_addr, int laddr_len,
+forceinline void eal_wsa_hash(int mode, const char* local_addr, int laddr_len,
                                      char* local_port,  int lport_len,
                                      char* remote_addr, int raddr_len,
                                      char* remote_port, int rport_len, uint64_t* inst_id)
@@ -171,13 +174,13 @@ forceinline static void eal_wsa_hash(int mode, const char* local_addr, int laddr
 
 }
 
-forceinline static int eal_wsa_tcp_connect(eal_wsa_service_param* pm)
+forceinline int eal_wsa_tcp_connect(eal_wsa_service_param* pm)
 {
 
 }
 
 
-forceinline static int eal_wsa_create_tcp_service(eal_wsa_service_param* pm)
+forceinline int eal_wsa_create_tcp_service(eal_wsa_service_param* pm)
 {
     int ret = 0;
     struct addrinfo *local = NULL;
@@ -323,7 +326,7 @@ forceinline static int eal_wsa_create_tcp_service(eal_wsa_service_param* pm)
     return ret;
 }
 
-forceinline static int eal_wsa_create_udp_handle(eal_wsa_service_param* pm)
+forceinline int eal_wsa_create_udp_handle(eal_wsa_service_param* pm)
 {
     int ret = 0;
     struct addrinfo *local = NULL;
@@ -420,7 +423,7 @@ forceinline static int eal_wsa_create_udp_handle(eal_wsa_service_param* pm)
     return ret;
 }
 
-forceinline static int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
+forceinline int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
 {
     int ret = 0;
     struct addrinfo *local = NULL;
@@ -540,7 +543,7 @@ forceinline static int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
     return ret;
 }
 
-forceinline static int  eal_wsa_init()
+forceinline int  eal_wsa_init(void)
 {
     /* 请求2.2版本的WinSock库 */
     WORD version = MAKEWORD(2, 2);
@@ -566,7 +569,7 @@ forceinline static int  eal_wsa_init()
     return 0;
 }
 
-forceinline static void  eal_wsa_finit()
+forceinline void  eal_wsa_finit(void)
 {
     WSACleanup();
 }

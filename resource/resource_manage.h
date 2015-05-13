@@ -63,7 +63,7 @@ struct lmice_time_s
 };
 typedef struct lmice_time_s lm_time_t;
 
-struct __attribute__((__aligned__((8)))) lmice_state_s
+struct forcepack(8) lmice_state_s
 {
     uint8_t value[8];
 };
@@ -243,7 +243,9 @@ struct lmice_worker_info_s
 
     /* worker process id if equal to zero(0) means rtspace maintain the resource and thread-level instance */
     int32_t process_id;
+#if !defined(_WIN32)
     int32_t padding0;
+#endif
     /* worker thread id, if equal to zero(0) means process-level instance */
     eal_tid_t thread_id;
     /* worker type identity, user defined */

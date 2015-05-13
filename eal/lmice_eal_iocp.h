@@ -32,6 +32,9 @@ struct eal_iocp_data_s
 {
     uint64_t inst_id;
     int operation;
+#if defined(WIN64)
+    int padding0;
+#endif
     WSABUF data;
     OVERLAPPED overlapped;
     DWORD recv_bytes;
@@ -49,7 +52,7 @@ struct eal_iocp_data_list_s
 };
 typedef struct eal_iocp_data_list_s eal_iocp_data_list;
 
-forceinline static int eal_iocp_create_data_list(eal_iocp_data_list** pb)
+forceinline int eal_iocp_create_data_list(eal_iocp_data_list** pb)
 {
     *pb = (eal_iocp_data_list*)malloc( sizeof(eal_iocp_data_list) );
     if(*pb == NULL)
@@ -58,7 +61,7 @@ forceinline static int eal_iocp_create_data_list(eal_iocp_data_list** pb)
     return 0;
 }
 
-forceinline static void eal_iocp_destroy_data_list(eal_iocp_data_list* pb)
+forceinline void eal_iocp_destroy_data_list(eal_iocp_data_list* pb)
 {
     eal_iocp_data_list *next = NULL;
     do {
@@ -69,7 +72,7 @@ forceinline static void eal_iocp_destroy_data_list(eal_iocp_data_list* pb)
 }
 
 
-forceinline static int eal_iocp_append_data(eal_iocp_data_list* pb, uint64_t inst_id, eal_iocp_data** data)
+forceinline int eal_iocp_append_data(eal_iocp_data_list* pb, uint64_t inst_id, eal_iocp_data** data)
 {
     size_t i=0;
     eal_iocp_data_list *next = NULL;
@@ -110,7 +113,7 @@ forceinline static int eal_iocp_append_data(eal_iocp_data_list* pb, uint64_t ins
 
 }
 
-forceinline static void eal_iocp_remove_data(eal_iocp_data* bt)
+forceinline void eal_iocp_remove_data(eal_iocp_data* bt)
 {
     bt->inst_id = 0;
 }
@@ -132,7 +135,7 @@ struct eal_iocp_buffer_list_s
 };
 typedef struct eal_iocp_buffer_list_s eal_iocp_buff_list;
 
-forceinline static int eal_create_iocp_buffer_list(eal_iocp_buff_list** pb)
+forceinline int eal_create_iocp_buffer_list(eal_iocp_buff_list** pb)
 {
     *pb = (eal_iocp_buff_list*)malloc( sizeof(eal_iocp_buff_list) );
     if(*pb == NULL)
@@ -141,7 +144,7 @@ forceinline static int eal_create_iocp_buffer_list(eal_iocp_buff_list** pb)
     return 0;
 }
 
-forceinline static void eal_destroy_iocp_buffer_list(eal_iocp_buff_list* pb)
+forceinline  void eal_destroy_iocp_buffer_list(eal_iocp_buff_list* pb)
 {
     eal_iocp_buff_list *next = NULL;
     do {
@@ -151,7 +154,7 @@ forceinline static void eal_destroy_iocp_buffer_list(eal_iocp_buff_list* pb)
     } while(pb != NULL);
 }
 
-forceinline static int eal_append_iocp_buffer(eal_iocp_buff_list* pb, uint64_t inst_id, char** buffer)
+forceinline int eal_append_iocp_buffer(eal_iocp_buff_list* pb, uint64_t inst_id, char** buffer)
 {
     size_t i=0;
     eal_iocp_buff_list *next = NULL;
@@ -188,19 +191,19 @@ forceinline static int eal_append_iocp_buffer(eal_iocp_buff_list* pb, uint64_t i
 
 }
 
-forceinline static void eal_remove_iocp_bt(eal_iocp_bt* bt)
+forceinline void eal_remove_iocp_bt(eal_iocp_bt* bt)
 {
     bt->inst_id = 0;
 }
 
-forceinline static void eal_remove_iocp_buffer(char* buffer)
+forceinline void eal_remove_iocp_buffer(char* buffer)
 {
     eal_iocp_bt* bt = (eal_iocp_bt*)(buffer - sizeof(bt->inst_id) );
     bt->inst_id = 0;
 }
 
 
-forceinline static int eal_create_iocp_handle(HANDLE* cp)
+forceinline int eal_create_iocp_handle(HANDLE* cp)
 {
     int ret = 0;
     DWORD err = 0;
@@ -216,7 +219,7 @@ forceinline static int eal_create_iocp_handle(HANDLE* cp)
 }
 
 typedef DWORD  (WINAPI *eal_iocp_worker_thread_type) (LPVOID ctx);
-forceinline static void eal_create_iocp_worker(int size, eal_iocp_worker_thread_type worker, HANDLE cp)
+forceinline void eal_create_iocp_worker(int size, eal_iocp_worker_thread_type worker, HANDLE cp)
 {
     HANDLE  tfd = NULL;
     DWORD   tid = 0;

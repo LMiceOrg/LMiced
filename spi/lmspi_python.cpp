@@ -1,4 +1,4 @@
-﻿
+
 #include "lmspi_impl.h"
 #include "lmspi_cxx.h"
 #include <boost/python.hpp>
@@ -57,7 +57,7 @@ struct LMspiWrap : LMspi, wrapper<LMspi>
         return f();
     }
 
-    //场景管理
+    // 场景管理
     int join_session(uint64_t session_id)
     {
         override f = this->get_override("join_session");
@@ -70,7 +70,7 @@ struct LMspiWrap : LMspi, wrapper<LMspi>
         return f(session_id);
     }
 
-    //资源注册
+    // 资源注册
     int register_publish(const char* type, const char* inst, int size, uint64_t *event_id)
     {
         override f = this->get_override("register_publish");
@@ -83,7 +83,7 @@ struct LMspiWrap : LMspi, wrapper<LMspi>
         return f(type, inst, event_id);
     }
 
-    //事件管理
+    // 事件管理
     int register_tick_event(int period, int size, int due, uint64_t* event_id)
     {
         override f = this->get_override("register_tick_event");
@@ -103,7 +103,7 @@ struct LMspiWrap : LMspi, wrapper<LMspi>
         return f(event_list, count, event_id);
     }
 
-    //基于ID的回调函数管理
+    // 基于ID的回调函数管理
     int register_callback(uint64_t id, lmice_event_callback *callback)
     {
         override f = this->get_override("register_callback");
@@ -116,7 +116,7 @@ struct LMspiWrap : LMspi, wrapper<LMspi>
         return f(id, callback);
     }
 
-    //可信计算,QoS管理
+    // 可信计算,QoS管理
     int set_tc_level(int level)
     {
         override f = this->get_override("set_tc_level");
@@ -129,7 +129,7 @@ struct LMspiWrap : LMspi, wrapper<LMspi>
         return f(level);
     }
 
-    //阻塞运行与资源回收
+    // 阻塞运行与资源回收
     int join()
     {
         override f = this->get_override("leave_session");
@@ -137,7 +137,7 @@ struct LMspiWrap : LMspi, wrapper<LMspi>
     }
 };
 
-//资源注册
+// 资源注册
 int pywrap_register_publish(LMspi&spi, const char* type, const char* inst, int size, LMEvent& event_id)
 {
     int ret = 0;
@@ -156,7 +156,7 @@ int pywrap_register_subscribe(LMspi&spi, const char* type, const char* inst, LME
     return ret;
 }
 
-//事件管理
+// 事件管理
 int pywrap_register_tick_event(LMspi&spi, int period, int size, int due, LMEvent& event_id)
 {
     int ret = 0;
@@ -225,29 +225,29 @@ BOOST_PYTHON_MODULE(lmspi)
             .def("init", pure_virtual(&LMspi::init))
             .def("commit", pure_virtual(&LMspi::commit) )
 
-            //场景管理
+            // 场景管理
             .def("join_session", pure_virtual(&LMspi::join_session) )
             .def("leave_session", pure_virtual(&LMspi::leave_session) )
-            //资源注册
+            // 资源注册
             .def("register_publish", pure_virtual(&LMspi::register_publish) )
             .def("register_subscribe", pure_virtual(&LMspi::register_subscribe) )
 
-            //事件管理
+            // 事件管理
             .def("register_tick_event", pure_virtual(&LMspi::register_tick_event) )
             .def("register_timer_event", pure_virtual(&LMspi::register_timer_event) )
             .def("register_custom_event", pure_virtual(&LMspi::register_custom_event) )
 
-            //基于ID的回调函数管理
+            // 基于ID的回调函数管理
             .def("register_callback", pure_virtual(&LMspi::register_callback) )
             .def("unregister_callback", pure_virtual(&LMspi::unregister_callback) )
 
-            //可信计算,QoS管理
+            // 可信计算,QoS管理
             .def("set_tc_level", pure_virtual(&LMspi::set_tc_level) )
             .def("set_qos_level", pure_virtual(&LMspi::set_qos_level) )
 
-            //阻塞运行与资源回收
+            // 阻塞运行与资源回收
             .def("join", pure_virtual(&LMspi::join) )
-            //重载
+            // 重载
 
             .def("register_publish", pywrap_register_publish )
             .def("register_subscribe", pywrap_register_subscribe )

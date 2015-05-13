@@ -18,7 +18,7 @@
 
 
 
-static forceinline void trust_resource_compute(lm_trust_t* pt) {
+forceinline void trust_resource_compute(lm_trust_t* pt) {
     size_t pos = 0;
     int ret = 0;
     lm_worker_info_t *inst=NULL;

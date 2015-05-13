@@ -1,7 +1,7 @@
 #ifndef LMICE_EAL_TIME_H
 #define LMICE_EAL_TIME_H
 #include "lmice_eal_common.h"
-#include <unistd.h>
+
 #include <time.h>
 #include <stdint.h>
 
@@ -14,7 +14,7 @@
 /* GCD */
 #include <dispatch/dispatch.h>
 
-forceinline int eal_init_timei(uint64_t* factor) {
+forceinline int eal_time_factor(uint64_t* factor) {
     mach_timebase_info_data_t time_base;
     mach_timebase_info(&time_base);
     *factor = time_base.numer / time_base.denom;
