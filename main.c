@@ -11,11 +11,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "net/net_beatheart.h"
 
 int main(int argc, char* argv[])
 {
-    printf("sizeof beatheart %lu\t%lu\n", sizeof(lmnet_bh_pkg_t), sizeof(lmnet_bh_prm_t) );
+
     if(argc > 1)
     {
         if(strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0)

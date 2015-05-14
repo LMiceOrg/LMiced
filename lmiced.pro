@@ -8,7 +8,7 @@ timer/timer_system_time.c \
 resource/resouce_manage.c \
     trust/trust_manage.c \
     schedule/action_schedule.c \
-    net/net_beatheart.c
+#    net/net_beatheart.c
 #    net/net_manage.c
 #    main.cpp \
 #    resource/resource_shm.cpp \
@@ -34,7 +34,8 @@ trust/trust_manage.h \
     schedule/action_schedule.h \
     net/net_manage.h \
     net/net_manage_win.h \
-    net/net_beatheart.h
+#    net/net_beatheart.h \
+    system/system_syscall.h
 #    system/system_environment.h \
 #    system/system_signal.h \
 #    system/system_environment_internal.h \

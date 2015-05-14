@@ -23,7 +23,7 @@ void* eal_timer_thread(void * data)
     eal_timer_free_context(ctx);
 
     /* init factor  of nano second */
-    eal_init_timei(&factor);
+    eal_time_factor(&factor);
 
     /* from 100x nano-seconds to nano-seconds */
     time_to_wait = interval * 100llu * factor;

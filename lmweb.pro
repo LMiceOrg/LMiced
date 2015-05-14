@@ -9,7 +9,7 @@ HEADERS += \
     web/user.h \
     web\sha1.h
 
-SOURCES += web\main.cpp \
+SOURCES += web/main.cpp \
     web/json_request.cpp \
     web/lmprofile.cpp \
     web/user.cpp \
