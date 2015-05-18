@@ -1,4 +1,4 @@
-#include "rtspace.h"
+﻿#include "rtspace.h"
 
 #include "trust_manage.h"
 
@@ -24,7 +24,7 @@ forceinline void trust_resource_compute(lm_trust_t* pt) {
     lm_worker_info_t *inst=NULL;
     lm_server_t *server = pt->server;
     ret = eal_spin_lock(&server->lock);
-    for(inst = &server->worker, pos = 0; pos < DEFAULT_CLIENT_SIZE; ++inst, ++pos) {
+    for(inst = &server->worker, pos = 0; pos < DEFAULT_WORKER_SIZE; ++inst, ++pos) {
         HANDLE hProcess = NULL;
         HANDLE hThread = NULL;
         DWORD err;
@@ -158,7 +158,7 @@ static void trust_thread_proc(void* data)
     lm_worker_info_t *inst=NULL;
     lm_server_t *server = pt->server;
     ret = eal_spin_lock(&server->lock);
-    for(inst = &server->worker, pos = 0; pos < DEFAULT_CLIENT_SIZE; ++inst, ++pos) {
+    for(inst = &server->worker, pos = 0; pos < DEFAULT_WORKER_SIZE; ++inst, ++pos) {
 
         int err;
 

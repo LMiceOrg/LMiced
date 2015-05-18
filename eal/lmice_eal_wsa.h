@@ -1,4 +1,4 @@
-#ifndef LMICE_EAL_WSA_H
+﻿#ifndef LMICE_EAL_WSA_H
 #define LMICE_EAL_WSA_H
 
 /* Windows Socket Library API */
@@ -446,13 +446,12 @@ forceinline int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
     struct addrinfo *local = NULL;
     struct addrinfo *bp = NULL;
     struct addrinfo hints;
-    HANDLE hdl = NULL;
 
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
     hints.ai_socktype = SOCK_DGRAM; /* Stream socket */
     hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
-    hints.ai_protocol = 0;          /* TCP protocol */
+    hints.ai_protocol = IPPROTO_IP;          /* IP protocol */
     hints.ai_canonname = NULL;
     hints.ai_addr = NULL;
     hints.ai_next = NULL;
@@ -486,7 +485,6 @@ forceinline int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
             continue;
 
         /* 绑定SOCKET到地址 */
-        /**
         ret = bind(pm->hd->nfd, bp->ai_addr, bp->ai_addrlen);
         if (ret == SOCKET_ERROR)
         {
@@ -495,7 +493,6 @@ forceinline int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
             closesocket(pm->hd->nfd);
             continue;
         }
-        */
 
         /** 加入组播组 */
         struct ip_mreq req;
@@ -522,40 +519,51 @@ forceinline int eal_wsa_create_mc_handle(eal_wsa_service_param* pm)
                      pm->remote_port, 8,
                      &(pm->hd->inst_id) );
 
-        /* 将接受套接字和完成端口关联 */
-        hdl = CreateIoCompletionPort((HANDLE)(pm->hd->nfd),
-                                     pm->cp,
-                                     (ULONG_PTR)pm->hd,
-                                     0);
-        if(hdl == NULL)
-        {
-            lmice_error_print("CreateIoCompletionPort failed\n");
-            closesocket(pm->hd->nfd);
-            freeaddrinfo(local);
-            eal_wsa_remove_handle(pm->hd);
-            return -1;
-        }
-
-        /* 准备数据 */
-        eal_iocp_append_data(pm->ilist, pm->hd->inst_id, &pm->data);
-
-        /* 接收数据 */
-        WSARecvFrom(pm->hd->nfd,
-                    &(pm->data->data),
-                    1,
-                    &(pm->data->recv_bytes),
-                    &(pm->data->flags),
-                    (struct sockaddr*)&(pm->hd->addr),
-                    &(pm->hd->addrlen),
-                    &(pm->data->overlapped),
-                    NULL);
-
         ret = 0;
         break;
 
     } /* end-for: bp */
 
     freeaddrinfo(local);
+
+    return ret;
+}
+
+forceinline int eal_wsa_bind_handle_cp(eal_wsa_service_param* pm)
+{
+    HANDLE hdl = NULL;
+
+    /* 将接受套接字和完成端口关联 */
+    hdl = CreateIoCompletionPort((HANDLE)(pm->hd->nfd),
+                                 pm->cp,
+                                 (ULONG_PTR)pm->hd,
+                                 0);
+    if(hdl == NULL) {
+        lmice_error_print("CreateIoCompletionPort failed\n");
+        closesocket(pm->hd->nfd);
+        pm->hd->nfd = 0;
+        eal_wsa_remove_handle(pm->hd);
+        return -1;
+    }
+}
+
+forceinline int eal_wsa_arecv_data(eal_wsa_service_param* pm)
+{
+    int ret = 0;
+
+    /* 准备数据 */
+    eal_iocp_append_data(pm->ilist, pm->hd->inst_id, &pm->data);
+
+    /* 接收数据 */
+    ret = WSARecvFrom(pm->hd->nfd,
+                &(pm->data->data),
+                1,
+                &(pm->data->recv_bytes),
+                &(pm->data->flags),
+                (struct sockaddr*)&(pm->hd->addr),
+                &(pm->hd->addrlen),
+                &(pm->data->overlapped),
+                NULL);
 
     return ret;
 }

@@ -1,4 +1,4 @@
-#ifndef NET_BEATHEART_H
+﻿#ifndef NET_BEATHEART_H
 #define NET_BEATHEART_H
 
 #include <eal/lmice_eal_common.h>
@@ -59,7 +59,7 @@ struct lmice_net_beatheart_data_content_s
     uint32_t    net_usage;
 
 };
-typedef struct lmice_net_beatheart_data_content_s lmnet_bh_ctn_t;
+typedef struct lmice_net_beatheart_data_content_s lmnet_bctn_t;
 
 /* net configure */
 #define LMICE_NET_CFG_IPV4 0
@@ -74,9 +74,9 @@ struct lmice_net_beatheart_message_s
     uint64_t evt_tick;
     uint64_t obj_inst;
     /* lmnet_ct_t */
-    lmnet_bh_ctn_t ctn;
+    lmnet_bctn_t ctn;
 };
-typedef struct lmice_net_beatheart_message_s lmnet_bh_msg_t;
+typedef struct lmice_net_beatheart_message_s lmnet_bmsg_t;
 
 struct lmice_net_beatheart_package_s
 {
@@ -86,9 +86,9 @@ struct lmice_net_beatheart_package_s
     uint16_t headlen;
     uint32_t version;
     char meta_data[16]; /* i[b16]iiiiiii */
-    lmnet_bh_msg_t  msg;
+    lmnet_bmsg_t  msg;
 };
-typedef struct lmice_net_beatheart_package_s lmnet_bh_pkg_t;
+typedef struct lmice_net_beatheart_package_s lmnet_bpkg_t;
 
 #define LMNET_BEATHEART_METADATA "i[b16]iiiiiii"
 
@@ -97,18 +97,22 @@ struct lmice_net_beatheart_param_s
 {
     lm_worker_t*    worker;
     eal_wsa_service_param net_param;
-    lmnet_bh_pkg_t bh_packge;
-    lmnet_bh_pkg_t bh_pkg_list[LMNET_BEATHEART_LIST_SIZE];
+    lmnet_bpkg_t bh_packge;
+    lmnet_bpkg_t bh_pkg_list[LMNET_BEATHEART_LIST_SIZE];
 };
 
-typedef struct lmice_net_beatheart_param_s lmnet_bh_prm_t;
+typedef struct lmice_net_beatheart_param_s lmnet_bprm_t;
 
+/* create beatheart service */
+int lmnet_beatheart_create(lm_res_param_t *pm);
+/* destroy beatheart service */
+int lmnet_beatheart_destroy(lm_res_param_t *pm);
 
 /* initialize beatheart resource */
-int lmnet_beatheart_init(lmnet_bh_prm_t* param);
+int lmnet_beatheart_init(lmnet_bprm_t* param);
 
 /* finalize beatheart resource */
-int lmnet_beatheart_final(lmnet_bh_prm_t* bh_param);
+int lmnet_beatheart_final(lmnet_bprm_t* bh_param);
 
 /** server mode beartheart routine
  * process incoming beatheart package
@@ -117,10 +121,10 @@ int lmnet_beatheart_final(lmnet_bh_prm_t* bh_param);
 */
 
 /* create server role */
-int lmnet_beatheart_server_create(lmnet_bh_prm_t* param);
+int lmnet_beatheart_server_create(lmnet_bprm_t* param);
 
 /* delete server role */
-int lmnet_beatheart_server_delete(lmnet_bh_prm_t* param);
+int lmnet_beatheart_server_delete(lmnet_bprm_t* param);
 
 
 /** client mode beartheart routine
@@ -132,10 +136,10 @@ int lmnet_beatheart_server_delete(lmnet_bh_prm_t* param);
 */
 
 /* create beatheart client role */
-int lmnet_beatheart_client_create(lmnet_bh_prm_t* bh_param);
+int lmnet_beatheart_client_create(lmnet_bprm_t* bh_param);
 
 /* delete beatheart client role */
-int lmnet_beatheart_client_delete(lmnet_bh_prm_t* bh_param);
+int lmnet_beatheart_client_delete(lmnet_bprm_t* bh_param);
 
 #endif /* NET_BEATHEART_H */
 

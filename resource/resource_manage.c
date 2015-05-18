@@ -302,7 +302,7 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
 
     server = (lm_server_t*)pm->res_server.addr;
     eal_spin_lock(&server->lock);
-    for(i=0; i<DEFAULT_CLIENT_SIZE; ++i)
+    for(i=0; i<DEFAULT_WORKER_SIZE; ++i)
     {
         worker = pm->res_worker +i;
 
@@ -528,7 +528,7 @@ void forceinline init_server_resource(lm_res_param_t* pm)
     pm->tm_param.pt = &server->tm;
     memset(pm->res_worker, 0, sizeof(pm->res_worker));
     lmice_critical_print("init_server_resource\n");
-    for(i=0; i<DEFAULT_CLIENT_SIZE; ++i)
+    for(i=0; i<DEFAULT_WORKER_SIZE; ++i)
     {
         pm->res_worker[i].info = &server->worker + i;
     }
@@ -543,6 +543,63 @@ void forceinline init_server_resource(lm_res_param_t* pm)
     init_tmlist_resource(pm->timer_worklist2);
     init_tmlist_resource(pm->timer_worklist3);
     init_tmlist_resource(pm->timer_worklist4);
+}
+
+int create_server_worker_resource(lm_res_param_t* pm)
+{
+    int ret = 0;
+    lmice_event_t   evt;
+    lmice_shm_t  shm;
+    lm_worker_res_t * worker = pm->res_worker;
+    uint64_t instid;
+    eal_pid_t pid = getpid();
+    eal_tid_t tid = 0;
+    instid = eal_hash64_fnv1a(&pid, sizeof(pid));
+    instid = eal_hash64_more_fnv1a(&tid, sizeof(tid), instid);
+    instid = eal_hash64_more_fnv1a(CLIENT_SHMNAME, sizeof(CLIENT_SHMNAME)-1, instid);
+
+    eal_shm_zero(&shm);
+    shm.size = DEFAULT_SHM_SIZE*16;
+    eal_shm_hash_name(instid, shm.name);
+    ret = eal_shm_create(&shm);
+    if(ret != 0)
+    {
+        lmice_critical_print("create_worker_resource call eal_shm_create[%s] size(%d) failed[%d]\n", shm.name, shm.size, ret);
+        return ret;
+    }
+
+    eal_event_zero(&evt);
+    eal_event_hash_name(instid, evt.name);
+    ret = eal_event_create(&evt);
+    if(ret != 0)
+    {
+        lmice_critical_print("create_worker_resource call eal_event_create failed[%d]\n", ret);
+        eal_shm_close(shm.fd, shm.addr);
+        return ret;
+    }
+
+    /* maintain resource */
+    worker->res.addr = shm.addr;
+    worker->res.sfd = shm.fd;
+    worker->res.efd = evt.fd;
+
+    worker->info->version = LMICE_VERSION;
+    worker->info->state = WORKER_RUNNING;
+    worker->info->process_id = pid;
+    worker->info->thread_id = tid;
+    worker->info->type_id = 0;
+    worker->info->inst_id = instid;
+
+    return 0;
+}
+
+int destroy_server_worker_resource(lm_shm_res_t * ipc)
+{
+    int ret = 0;
+    ret = eal_event_close(ipc->efd);
+    ret |= eal_shm_close(ipc->sfd, ipc->addr);
+
+    return ret;
 }
 
 int create_resource_service(lm_res_param_t* pm)
@@ -564,6 +621,14 @@ int create_resource_service(lm_res_param_t* pm)
     /* 初始化资源信息*/    
     init_server_resource(pm);
 
+    /* 创建server端工作实例 */
+    ret = create_server_worker_resource(pm);
+    if(ret != 0)
+    {
+        lmice_critical_print("Create server side worker shm failed[%d]\n", ret);
+        return 1;
+    }
+
     /* 启动工作实例资源维护服务 */
     create_worker_maintain_thread(pm);
 
@@ -574,7 +639,10 @@ int destroy_resource_service(lm_res_param_t* pm)
 {
     int ret = 0;
     lm_shm_res_t *m_resource = &pm->res_server;
-    ret = destroy_server_resource(m_resource);
+    lm_shm_res_t *m_worker = &pm->res_worker[0].res;
+
+    ret = destroy_server_worker_resource(m_worker);
+    ret |= destroy_server_resource(m_resource);
 
     return ret;
 }

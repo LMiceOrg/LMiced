@@ -1,4 +1,4 @@
-#ifndef RESOURCE_MANAGE_H
+﻿#ifndef RESOURCE_MANAGE_H
 #define RESOURCE_MANAGE_H
 
 /** 资源包括:
@@ -15,6 +15,8 @@
 #include "eal/lmice_eal_event.h"
 #include "eal/lmice_eal_thread.h"
 #include "eal/lmice_trace.h"
+#include "eal/lmice_eal_inc.h"
+#include "eal/lmice_eal_aio.h"
 
 
 #include <stdint.h>
@@ -29,7 +31,7 @@
 #define CLIENT_SHMNAME  "CC597303-0F85-40B2-8BDC-4724BD" /** C87B4E */
 #define BOARD_SHMNAME   "82E0EE49-382C-40E7-AEA2-495999" /** 392D29 */
 #define DEFAULT_SHM_SIZE 4096 /** 4KB */
-#define DEFAULT_CLIENT_SIZE 200
+#define DEFAULT_WORKER_SIZE 200
 #define DEFAULT_RESOURCE_SIZE 128
 enum schedule_state
 {
@@ -367,10 +369,24 @@ struct lmice_resource_parameter_s
 
     /* for resource service */
     lm_shm_res_t    res_server;
-    lm_worker_res_t res_worker[DEFAULT_CLIENT_SIZE];
+    /* the worker 0 is for server itself */
+    lm_worker_res_t res_worker[DEFAULT_WORKER_SIZE];
 
-    /* for scheduler time maintain */
+    /* for scheduler time parameter */
     lm_time_param_t tm_param;
+
+    /** for async-io */
+    /* data package */
+    eal_aio_data_list aio_list;
+    /* io handle */
+    eal_aio_handle cp;
+
+    /* for network server */
+    eal_inc_param bh_param;
+    /* sync time */
+    eal_inc_param st_param;
+    /* pub-sub */
+    eal_inc_param ps_param;
 
     /* for timer-scheduler pointer-array */
 
@@ -397,8 +413,9 @@ struct lmice_resource_parameter_s
     lm_msglist_t pubmsg_list[128];
     lm_msglist_t submsg_list[128];
 
-    /* 完成端口 */
-    evtfd_t cp;
+
+
+
 };
 typedef struct lmice_resource_parameter_s lm_res_param_t;
 

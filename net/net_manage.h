@@ -1,7 +1,8 @@
-#ifndef NET_MANAGE_H
+﻿#ifndef NET_MANAGE_H
 #define NET_MANAGE_H
 
 #include <stdint.h>
+#include "resource/resource_manage.h"
 
 /** NET service
  * description: inter-node communication
@@ -14,7 +15,7 @@
  * net package struct:
  * 1. package-header
  * 1.1 endian: sender's endian
- * 1.2 padding: 1,4,8 ...
+ * 1.2 padding: 1,2,4,8 ...
  * 1.3 version: LMICED_VERSION
  * 1.4 header-length: 8 + meta-data's length bytes( 8 bytes aligned)
  * 1.5 meta-data: message structure meta element
@@ -64,20 +65,12 @@ typedef struct lmice_net_data_content_s lmnet_ctn_t;
 #endif
 
 /** beatheart service */
-int create_beatheart_service(uint64_t inst_id);
-int destroy_beatheart_service(uint64_t inst_id);
-
 /** ntp service */
-int create_ntp_service(uint64_t inst_id);
-int destroy_ntp_service(uint64_t inst_id);
-
 /** pubmsg service
-param1: socket id
-param2: pubmsg_list */
-int create_pubmsg_service(uint64_t inst_id);
-int destroy_pubmsg_service(uint64_t inst_id);
 
-int create_network_server(lm_mc_cfg_t *cfg);
 
+/** network server */
+int create_network_server(lm_res_param_t *pm);
+int stop_network_server(lm_res_param_t *pm);
 #endif /** NET_MANAGE_H */
 

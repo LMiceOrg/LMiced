@@ -11,7 +11,8 @@ SOURCES += eal/lmice_ring.c \
     eal/lmice_eal_spinlock.c \
     eal/lmice_eal_malloc.c \
     eal/lmice_eal_event.c \
-    eal/lmice_eal_time.c
+    eal/lmice_eal_time.c    \
+    eal/lmice_core.c
 
 
 OTHER_FILES += \
@@ -23,7 +24,7 @@ OTHER_FILES += \
     test/global_defines.py
 
 HEADERS += \
-    lmice_core.h \
+    eal/lmice_core.h \
     eal/lmice_ring.h \
     eal/lmice_trace.h \
     lmice_json_util.h \
@@ -42,7 +43,9 @@ HEADERS += \
     eal/lmice_eal_time_win.h \
     eal/lmice_eal_shm_win.h \
     eal/lmice_eal_event.h \
-    eal/lmice_eal_socket.h
+    eal/lmice_eal_socket.h \
+    eal/lmice_eal_inc.h \
+    eal/lmice_eal_aio.h
 
 #Common config
 INCLUDEPATH += eal

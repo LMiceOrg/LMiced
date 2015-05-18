@@ -11,11 +11,15 @@ struct lmice_environment_s
     int32_t pid;
     int32_t ppid;
     FILE* logfd;
-
+    uint32_t lcore;
+    uint32_t memory;
+    uint32_t net_bandwidth;
 };
 
 typedef struct lmice_environment_s lmice_environment_t;
 
+
+int eal_env_init(lmice_environment_t* env);
 
 /**
  * @brief lmice_process_cmdline

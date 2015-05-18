@@ -1,9 +1,10 @@
-﻿//#include "net_manage.h"
+﻿#include "net_manage.h"
 
-//#include "eal/lmice_trace.h"
-//#include "eal/lmice_eal_wsa.h"
+#include "eal/lmice_trace.h"
+#include "eal/lmice_eal_inc.h"
 
-//#include "rtspace.h"
+#include "rtspace.h"
+
 //int net_wsa_close_mc_handle(eal_wsa_handle *hd)
 //{
 
@@ -178,3 +179,32 @@
 //    eal_wsa_handle handle;
 //    eal_wsa_create_mc_handle(cfg, handle);
 //}
+
+#include "net_beatheart.h"
+
+int create_network_server(lm_res_param_t *pm)
+{
+    int ret = 0;
+
+    /* init network */
+    ret = eal_inc_init();
+
+    /* create beatheart service */
+    ret = lmnet_beatheart_create(pm);
+
+    /* create synctime service */
+    /* create pub-sub service */
+
+    return ret;
+}
+
+int stop_network_server(lm_res_param_t *pm)
+{
+    /*destroy beatheart service */
+    lmnet_beatheart_destroy(pm);
+
+    /* finit network */
+    eal_inc_finit();
+
+    return 0;
+}

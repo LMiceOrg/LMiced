@@ -3,6 +3,7 @@
 #include "resource/resource_manage.h"
 #include "trust/trust_manage.h"
 #include "schedule/action_schedule.h"
+#include "net/net_manage.h"
 
 #include "eal/lmice_eal_common.h"
 #include "eal/lmice_trace.h"
@@ -43,7 +44,12 @@ int main(int argc, char* argv[])
         m_server = (lm_server_t*)((void*)(res_param->res_server.addr));
         lmice_debug_print("schedule create\n");
         /* 任务调度服务 */
-        create_schedule_service(res_param);
+        ret = create_schedule_service(res_param);
+        if(ret != 0)
+        {
+            lmice_critical_print("Create schedule service failed[%d]\n", ret);
+            return 1;
+        }
 
 
         lmice_debug_print("trust create\n");
@@ -54,16 +60,21 @@ int main(int argc, char* argv[])
         ret = create_trust_thread(&m_trust);
         if(ret != 0)
         {
-            lmice_critical_print("Create trust service failed[%d]\n", ret);
+            lmice_critical_print("Create trust server failed[%d]\n", ret);
             return 1;
         }
 
-        lmice_debug_print("trust created\n");
-
         /* 节点间网络通讯服务 */
+        ret = create_network_server(res_param);
+        if(ret != 0)
+        {
+            lmice_critical_print("Create inter-node communication service failed[%d]\n", ret);
+            return 1;
+        }
 
         getchar();
 
+        stop_network_server(res_param);
         stop_trust_thread(&m_trust);
         destroy_schedule_service(res_param);
         destroy_resource_service(res_param);

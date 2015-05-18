@@ -1,4 +1,4 @@
-#include "net_beatheart.h"
+﻿#include "net_beatheart.h"
 
 #include "lmice_eal_endian.h"
 #include "lmice_eal_spinlock.h"
@@ -19,6 +19,16 @@ typedef struct lmice_ring_head_s lm_ring_hd;
     rhd->capacity = LMNET_BEATHEART_LIST_SIZE;  \
     rhd->next = NULL;
 
+#define LMNET_BEATHEART_CONTENT_INIT(ctn) \
+    ctn->size = sizeof(lmnet_bh_ctn_t); \
+    ctn->worker_size = DEFAULT_WORKER_SIZE; \
+    ctn->lcore_size = 8;    \
+    ctn->memory_size = 32;  \
+    ctn->net_bankwidth = 1000;  \
+    ctn->worker_usage = 0;  \
+    ctn->lcore_usage = 0;   \
+    ctn->memory_usage = 0;  \
+    ctn->net_usage = 0;
 
 /** initialize beatheart service
  * 1. init socket
@@ -29,17 +39,17 @@ typedef struct lmice_ring_head_s lm_ring_hd;
 */
 
 /* initialize beatheart resource */
-int lmnet_beatheart_init(lmnet_bh_prm_t* param)
+int lmnet_beatheart_init(lmnet_bprm_t* param)
 {
     int ret = 0;
-    lmnet_bh_pkg_t *pkg = &(param->bh_packge);
-    lmnet_bh_msg_t *msg = &(pkg->msg);
-    lmnet_bh_ctn_t *ctn = &(msg->ctn);
-    lmnet_bh_pkg_t *pkglist = param->bh_pkg_list;
+    lmnet_bpkg_t *pkg = &(param->bh_packge);
+    lmnet_bmsg_t *msg = &(pkg->msg);
+    lmnet_bctn_t *ctn = &(msg->ctn);
+    lmnet_bpkg_t *pkglist = param->bh_pkg_list;
     lm_ring_hd* rhd = (lm_ring_hd*)(void*)pkglist;
 
     /* create mc socket handle, add membership */
-    ret = eal_wsa_create_mc_handle(param->net_param);
+    ret = eal_wsa_create_mc_handle(&(param->net_param));
 
     /* init inter-node beatheart list */
     LMNET_BEATHEART_PKGLIST_INIT(rhd);
@@ -49,12 +59,12 @@ int lmnet_beatheart_init(lmnet_bh_prm_t* param)
 
     eal_spin_unlock(&param->worker->lock);
     /* init client package */
-    memset(pkg, 0, sizeof(lmnet_bh_pkg_t));
+    memset(pkg, 0, sizeof(lmnet_bpkg_t));
 
     /* init package header */
     pkg->endian = eal_is_little_endian();
     pkg->padding = LMICE_PADDING_DEFAULT;
-    pkg->headlen = sizeof(lmnet_bh_pkg_t) - sizeof(lmnet_bh_msg_t);
+    pkg->headlen = sizeof(lmnet_bpkg_t) - sizeof(lmnet_bmsg_t);
     pkg->version = LMICE_VERSION;
     memcpy(pkg->meta_data, LMNET_BEATHEART_METADATA, sizeof(LMNET_BEATHEART_METADATA) -1);
 
@@ -64,7 +74,7 @@ int lmnet_beatheart_init(lmnet_bh_prm_t* param)
     msg->obj_inst = lmice_net_beatheart_inst(ctn->net_cfg, ctn->net_addr);
 
     /* init content */
-    ctn->size = sizeof(lmnet_bh_ctn_t);
+    ctn->size = sizeof(lmnet_bctn_t);
     ctn->worker_size = 200;
     ctn->lcore_size = 8;
     ctn->memory_size = 32;
@@ -79,7 +89,7 @@ int lmnet_beatheart_init(lmnet_bh_prm_t* param)
 }
 
 /* finalize beatheart resource */
-int lmnet_beatheart_final(lmnet_bh_prm_t* bh_param)
+int lmnet_beatheart_final(lmnet_bprm_t* bh_param)
 {
     /* stop mc socket handle */
     return 0;
@@ -92,7 +102,7 @@ int lmnet_beatheart_final(lmnet_bh_prm_t* bh_param)
 */
 
 /* create server role */
-int lmnet_beatheart_server_create(lmnet_bh_prm_t* param)
+int lmnet_beatheart_server_create(lmnet_bprm_t* param)
 {
     int ret = 0;
     HANDLE hdl = NULL;
@@ -103,8 +113,7 @@ int lmnet_beatheart_server_create(lmnet_bh_prm_t* param)
                                  pm->cp,
                                  (ULONG_PTR)pm->hd,
                                  0);
-    if(hdl == NULL)
-    {
+    if(hdl == NULL) {
         lmice_error_print("CreateIoCompletionPort failed\n");
         closesocket(pm->hd->nfd);
         eal_wsa_remove_handle(pm->hd);
@@ -129,7 +138,7 @@ int lmnet_beatheart_server_create(lmnet_bh_prm_t* param)
 }
 
 /* delete server role */
-int lmnet_beatheart_server_delete(lmnet_bh_prm_t* param)
+int lmnet_beatheart_server_delete(lmnet_bprm_t* param)
 {
     int ret = 0;
     eal_wsa_service_param* pm = &(param->net_param);
@@ -148,16 +157,45 @@ int lmnet_beatheart_server_delete(lmnet_bh_prm_t* param)
 */
 
 /* create beatheart client role */
-int lmnet_beatheart_client_create(lmnet_bh_prm_t* bh_param)
+int lmnet_beatheart_client_create(lmnet_bprm_t* bh_param)
 {
     int ret = 0;
-    lmnet_bh_pkg_t *pkg = &(bh_param->bh_packge);
-    lmnet_bh_msg_t *msg = &(pkg->msg);
-    lmnet_bh_ctn_t *ctn = &(msg->ctn);
+    lmnet_bpkg_t *pkg = &(bh_param->bh_packge);
+    lmnet_bmsg_t *msg = &(pkg->msg);
+    lmnet_bctn_t *ctn = &(msg->ctn);
 
     return ret;
 }
 
 /* delete beatheart client role */
-int lmnet_beatheart_client_delete(lmnet_bh_prm_t* bh_param);
+int lmnet_beatheart_client_delete(lmnet_bprm_t* bh_param)
+{
+    int ret = 0;
 
+    return ret;
+}
+
+/* create beatheart service */
+int lmnet_beatheart_create(lm_res_param_t *pm)
+{
+    int ret = 0;
+    lmice_critical_print("sizeof lmnet_bprm_t %u\n", sizeof(lmnet_bprm_t));
+//    lmnet_bprm_t* param = (lmnet_bprm_t*)malloc(sizeof(lmnet_bprm_t));
+//    lmnet_beatheart_init(param);
+
+//    lmnet_beatheart_server_create(param);
+//    lmnet_beatheart_client_create(param);
+    return ret;
+}
+
+/* destroy beatheart service */
+int lmnet_beatheart_destroy(lm_res_param_t *pm)
+{
+    int ret = 0;
+//    lmnet_bprm_t* param = (lmnet_bprm_t*)malloc(sizeof(lmnet_bprm_t));;
+//    lmnet_beatheart_client_delete(param);
+//    lmnet_beatheart_server_delete(param);
+//    lmnet_beatheart_final(param);
+
+    return ret;
+}
