@@ -3,7 +3,7 @@
 
 #include <eal/lmice_eal_common.h>
 #include <eal/lmice_eal_hash.h>
-#include <eal/lmice_eal_wsa.h>
+#include <eal/lmice_eal_inc.h>
 
 #include "resource/resource_manage.h"
 
@@ -104,7 +104,7 @@ struct lmice_net_beatheart_param_s
 typedef struct lmice_net_beatheart_param_s lmnet_bprm_t;
 
 /* create beatheart service */
-int lmnet_beatheart_create(lm_res_param_t *pm);
+int lmnet_beatheart_create(lm_res_param_t *res_param);
 /* destroy beatheart service */
 int lmnet_beatheart_destroy(lm_res_param_t *pm);
 

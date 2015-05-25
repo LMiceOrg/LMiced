@@ -11,6 +11,8 @@
 pragma comment(lib, "Kernel32.lib")
 */
 
+#define eal_iocp_handle HANDLE
+
 /* iocp 操作指令 */
 enum eal_iocp_operation_e
 {

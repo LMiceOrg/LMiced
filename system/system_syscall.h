@@ -3,6 +3,7 @@
 
 #include "lmice_eal_common.h"
 #include "lmice_eal_shm.h"
+#include "lmice_eal_spinlock.h"
 #include "lmice_trace.h"
 #include "resource/resource_manage.h"
 
@@ -73,4 +74,51 @@ lmsys_register_publish(lm_worker_t* worker, uint64_t type_id, uint64_t inst_id, 
 
 }
 
+/** register timer event */
+forceinline int
+lmsys_register_timer(lm_worker_res_t* worker, uint64_t session_id, eal_pid_t process_id, int period, int size, int due, uint64_t* event_id) {
+
+    lm_timer_info_t *info = NULL;
+    lm_worker_t * wk = NULL;
+    size_t i = 0;
+    int ret = TIMER_TYPE;
+    uint64_t inst_id;
+
+    inst_id = eal_hash64_fnv1a(&session_id, sizeof(session_id));
+    inst_id = eal_hash64_more_fnv1a(&process_id, sizeof(process_id), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&ret, sizeof(ret), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&due, sizeof(due), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&period, sizeof(period), inst_id);
+    inst_id = eal_hash64_more_fnv1a(&size, sizeof(size), inst_id);
+
+    lmice_critical_print("lmsys_register_timer call register_timer\n");
+    wk = (lm_worker_t *)worker->res.addr;
+    ret = eal_spin_trylock(&wk->lock);
+    if(ret != 0)
+        return ret;
+
+    ret = 1;
+    for(i=0; i<128; ++i ) {
+        info = wk->timer +i;
+        if(info->inst_id == 0) {
+            ret = 0;
+            info->type = TIMER_TYPE;
+            info->size = size;
+            info->period = period;
+            info->due = due;
+            info->inst_id = inst_id;
+            info->timer.count = 0;
+            info->timer.begin = 0;
+            *event_id = inst_id;
+            break;
+        }
+    }
+
+    eal_spin_unlock(&wk->lock);
+
+    return ret;
+}
+
+forceinline int
+lmsys_register_callback()
 #endif /** SYSTEM_SYSCALL_H */

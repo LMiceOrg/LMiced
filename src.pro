@@ -12,7 +12,8 @@ SOURCES += eal/lmice_ring.c \
     eal/lmice_eal_malloc.c \
     eal/lmice_eal_event.c \
     eal/lmice_eal_time.c    \
-    eal/lmice_core.c
+    eal/lmice_core.c \
+    eal/lmice_eal_inc.c
 
 
 OTHER_FILES += \
@@ -45,7 +46,8 @@ HEADERS += \
     eal/lmice_eal_event.h \
     eal/lmice_eal_socket.h \
     eal/lmice_eal_inc.h \
-    eal/lmice_eal_aio.h
+    eal/lmice_eal_aio.h \
+    eal/lmice_eal_kqueue.h
 
 #Common config
 INCLUDEPATH += eal

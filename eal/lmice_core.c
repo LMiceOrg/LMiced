@@ -72,8 +72,125 @@ forceinline void get_core_properties(uint32_t* lcore, uint32_t* mem, uint32_t* n
 
 }
 #elif defined(__APPLE__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+
+
+forceinline void get_net_bandwidth(const char* nif, uint32_t* bandwidth) {
+    int ret;
+    FILE* fp = NULL;
+    char cmd[64];
+    char mode[2];
+    char* p;
+    double rate;
+    memset(cmd, 0, 64);
+    snprintf(cmd, 63, "ifconfig -v %s|grep -e \"link\\srate\"", nif);
+    mode[0] = 'r';
+    mode[1] = '\0';
+    fp = popen(cmd, mode);
+    if(fp == NULL)
+    {
+        ret = errno;
+        lmice_critical_print("get_net_bandwidth call popen(%s) failed[%d]\n",cmd, ret );
+    }
+    memset(cmd, 0, 64);
+    fread(cmd, 1, 64, fp);
+    rate = atof(cmd+12);
+    for(p=cmd+12; p!= '\0'; ++p)
+    {
+        if(strncmp(p,"Gbps", 4) == 0 ||
+                strncmp(p,"gbps", 4) == 0) {
+            rate *= 1024*1024;
+            break;
+        }else if(strncmp(p, "Mbps", 4) == 0 ||
+                 strncmp(p, "mbps", 4) == 0) {
+            rate *= 1024;
+            break;
+        } else if(strncmp(p, "Kbps", 4) == 0 ||
+                  strncmp(p, "kbps", 4) == 0) {
+            break;
+        }
+    }
+    *bandwidth = rate;
+    /*
+    lmice_critical_print("link rate result :%s\t%lf\n", cmd+12, rate );
+    */
+    pclose(fp);
+
+}
+
+forceinline void get_core_properties(uint32_t* lcore, uint32_t* mem, uint32_t* net_bandwidth)
+{
+    int ret;
+    int mib[4];
+    uint64_t memsize = 0;
+    size_t len = 4;
+
+
+    mib[0] = CTL_HW;
+    mib[1] = HW_AVAILCPU;
+    len =4;
+    ret = sysctl(mib, 2, lcore, &len, NULL, 0);
+
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+    len = 8;
+    sysctl(mib, 2, &memsize, &len, NULL, 0);
+    if(ret != -1) {
+        *mem = memsize / (1024*1024);
+    }
+
+    get_net_bandwidth("en0", net_bandwidth);
+}
 
 #elif defined(__LINUX__)
+
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <linux/sockios.h>
+#include <linux/if.h>
+#include <linux/ethtool.h>
+#include <string.h>
+#include <stdlib.h>
+
+forceinline int get_net_bandwidth(const char* nif, uint32_t* bandwidth) {
+    int sock;
+        struct ifreq ifr;
+        struct ethtool_cmd edata;
+        int rc;
+
+        sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+        if (sock < 0) {
+            lmice_error_print("get_net_bandwidth call socket(DGRAM) failed\n");
+            return 1;
+        }
+
+        strncpy(ifr.ifr_name, "eth0", sizeof(ifr.ifr_name));
+        ifr.ifr_data = &edata;
+
+        edata.cmd = ETHTOOL_GSET;
+
+        rc = ioctl(sock, SIOCETHTOOL, &ifr);
+        if (rc < 0) {
+            lmice_error_print("get_net_bandwidth call ioctl(SIOCETHTOOL) failed\n");
+            return 1;
+        }
+        switch (ethtool_cmd_speed(&edata)) {
+            case SPEED_10: *bandwidth = 10*1024; break;
+            case SPEED_100: *bandwidth = 100*1024; break;
+            case SPEED_1000: *bandwidth = 1000*1024; break;
+            case SPEED_2500: *bandwidth = 2500*1024; break;
+            case SPEED_10000: *bandwidth = 100000*1024; break;
+            default: *bandwidth = 0;
+        }
+
+        return (0);
+}
 
 #else
 

@@ -23,8 +23,8 @@ int eal_env_init(lmice_environment_t* env);
 
 /**
  * @brief lmice_process_cmdline
- * @param argc
- * @param argv
+ * @param argc arg count
+ * @param argv arv list
  * @return 0 if success;else error occurred.
  */
 int lmice_process_cmdline(int argc, char * const *argv);

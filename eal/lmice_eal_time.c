@@ -48,7 +48,7 @@ void* eal_timer_thread(void * data)
     return 0;
 }
 
-#else defined(_WIN32)
+#elif defined(_WIN32)
 
 #if defined(USE_QUERY_PERFORMANCE_COUNTER)
 

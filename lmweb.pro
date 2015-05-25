@@ -30,6 +30,24 @@ INCLUDEPATH += ../lib/jansson-2.7/bin/include
 #websocketpp lib
 INCLUDEPATH += ../lib/websocketpp
 
+macx-clang* {
+message("MacOSX CLang C Compiler")
+CONFIG(debug, debug|release) {
+message("debug mode")
+LIBS += -L../build/debug
+}
+
+CONFIG(release, debug|release) {
+message("release mode")
+LIBS += -L../build/release
+}
+
+#Jansson lib
+INCLUDEPATH += ../lib/jansson/osx/include
+LIBS += -L../lib/jansson/osx/lib
+LIBS += -ljansson -lsrc
+}
+
 win32-msvc* {
 message("Windows Visual C Compiler")
 QMAKE_CFLAGS_DEBUG = -MTd -O2
