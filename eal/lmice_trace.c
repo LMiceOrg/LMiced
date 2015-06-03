@@ -49,6 +49,7 @@ lmice_trace_name_t lmice_trace_name[] =
         else _trace_ret = 0; \
     }
 
+#if defined(_WIN32)
 #define EAL_TRACE_WIN32() \
     printf(_trace_current_time); \
     LMICE_TRACE_COLOR_TAG3(type); \
@@ -57,15 +58,16 @@ lmice_trace_name_t lmice_trace_name[] =
     } else {    \
         printf(":[%d:0x%llx]", getpid(), eal_gettid()); \
     }
-
+#elif defined(__APPLE__)
 #define EAL_TRACE_UNIX() \
     if(_trace_ret == 0) {   \
         printf("%s%s%s%s:[%d:%s]",  \
             _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), _trace_thread_name); \
     } else { \
-        printf("%s%s%s%s:[%d:0x%llu]",    \
+        printf("%s%s%s%s:[%d:0x%p]",    \
             _trace_current_time, LMICE_TRACE_COLOR_TAG3(type), getpid(), eal_gettid()); \
     }
+#endif
 
 void eal_trace_color_print_per_thread(int type)
 {

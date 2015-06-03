@@ -18,7 +18,9 @@ int eal_shm_open_existing_with_mode(lmice_shm_t* shm, int mode)
     int ret = 0;
     shm->fd = shm_open(shm->name, mode, 0600);
     if(shm->fd == -1) {
-        lmice_debug_print("eal_shm_open_existing call shm_open(%s) return fd(%d) and size(%d) errno(%d)\n", shm->name, shm->fd, shm->size, errno);
+        /*
+         * lmice_debug_print("eal_shm_open_existing call shm_open(%s) return fd(%d) and size(%d) errno(%d)\n", shm->name, shm->fd, shm->size, errno);
+         */
         shm->fd = 0;
         return errno;
     } else {
@@ -33,12 +35,16 @@ int eal_shm_open_existing_with_mode(lmice_shm_t* shm, int mode)
             shm->size = (uint32_t)st.st_size;
             shm->addr = mmap(NULL, shm->size, prot, MAP_SHARED, shm->fd, 0);
             if((void*)shm->addr == MAP_FAILED) {
-                lmice_error_print("eal_shm_open_existing call mmap(%d) failed\n", shm->fd);
+                /*
+                * lmice_error_print("eal_shm_open_existing call mmap(%d) failed\n", shm->fd);
+                */
                 shm->addr = 0;
                 return errno;
             }
         } else {
-            lmice_error_print("eal_shm_open_existing call fstat(%d) failed\n", shm->fd);
+            /*
+             * lmice_error_print("eal_shm_open_existing call fstat(%d) failed\n", shm->fd);
+             */
             return errno;
         }
     }
@@ -51,32 +57,43 @@ int eal_shm_open_with_mode(lmice_shm_t* shm, int mode) {
     int ret = 0;
     shm->fd = shm_open(shm->name, mode, 0600);
     if(shm->fd == -1) {
-        lmice_debug_print("eal_shm_create call shm_open(%s) return fd(%d) and size(%u) errno(%d)\n", shm->name, shm->fd, shm->size, errno);
+        /*
+         * lmice_debug_print("eal_shm_create call shm_open(%s) return fd(%d) and size(%u) errno(%d)\n", shm->name, shm->fd, shm->size, errno);
+         */
         shm->fd = 0;
         return errno;
+    }
+
+    ret = ftruncate(shm->fd, shm->size);
+    if(ret != 0) {
+        /*
+         * lmice_debug_print("eal_shm_open call ftruncate fd(%d) and size(%u) errno(%d)\n", shm->fd, shm->size, errno);
+         */
+        close(shm->fd);
+        shm_unlink(shm->name);
+
     } else {
-
-        ret = ftruncate(shm->fd, shm->size);
-        if(ret != 0) {
-            lmice_debug_print("eal_shm_open call ftruncate fd(%d) and size(%u) errno(%d)\n", shm->fd, shm->size, errno);
-
-            close(shm->fd);
-            shm_unlink(shm->name);
-
-        } else {
-            shm->addr = mmap(NULL, (size_t)shm->size, PROT_READ|PROT_WRITE,MAP_SHARED, shm->fd, 0);
-            if((void*)shm->addr == MAP_FAILED) {
-                ret = errno;
-                shm->addr = 0;
-            }
+        shm->addr = mmap(NULL, (size_t)shm->size, PROT_READ|PROT_WRITE,MAP_SHARED, shm->fd, 0);
+        if((void*)shm->addr == MAP_FAILED) {
+            ret = errno;
+            shm->addr = 0;
         }
     }
+
     return ret;
 }
 
 int eal_shm_create(lmice_shm_t* shm)
 {
     return eal_shm_open_with_mode(shm, O_RDWR|O_CREAT);
+}
+
+int eal_shm_create_or_open(lmice_shm_t* shm)
+{
+    int ret =eal_shm_create(shm);
+    if(ret != 0)
+        ret = eal_shm_open_readwrite(shm);
+    return ret;
 }
 
 int eal_shm_destroy(lmice_shm_t* shm)
@@ -115,14 +132,18 @@ int eal_shm_open(lmice_shm_t* shm, int mode)
             shm->addr = mmap(NULL, shm->size, prot, MAP_SHARED, shm->fd, 0);
             if((void*)shm->addr == MAP_FAILED)
             {
-                lmice_error_print("eal_shm_open call mmap(%d) failed\n", shm->fd);
+                /*
+                 * lmice_error_print("eal_shm_open call mmap(%d) failed\n", shm->fd);
+                 */
                 shm->addr = 0;
                 return errno;
             }
         }
         else
         {
-            lmice_error_print("eal_shm_open call fstat(%d) failed\n", shm->fd);
+            /*
+             * lmice_error_print("eal_shm_open call fstat(%d) failed\n", shm->fd);
+             */
             return errno;
         }
     }
@@ -146,7 +167,9 @@ int eal_shm_close(shmfd_t fd, addr_t addr)
     if(fd != 0) {
         ret = close(fd);
         if(ret == -1) {
-            lmice_debug_print("eal_shm_close call close error %d\n", errno);
+            /*
+             * lmice_debug_print("eal_shm_close call close error %d\n", errno);
+             */
         }
         fd = 0;
     }
@@ -155,7 +178,9 @@ int eal_shm_close(shmfd_t fd, addr_t addr)
 
         ret = munmap(addr, sz);
         if(ret == -1) {
-            lmice_debug_print("eal_shm_close call munmap[%p, %lld] error %d\n",addr, st.st_size, errno);
+            /*
+             * lmice_debug_print("eal_shm_close call munmap[%p, %lld] error %d\n",addr, st.st_size, errno);
+             */
         }
         /* reset shared memory address to zero */
         addr = 0;

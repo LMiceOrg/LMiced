@@ -188,11 +188,11 @@ void eal_trace_color_print_per_thread(int type);
 #endif
 
 
-#define lmice_info_print EAL_TRACE_COLOR_PRINT_THREAD(info)
-#define lmice_debug_print EAL_TRACE_COLOR_PRINT_THREAD(debug)
-#define lmice_warning_print EAL_TRACE_COLOR_PRINT_THREAD(warning)
-#define lmice_error_print EAL_TRACE_COLOR_PRINT_THREAD(error)
-#define lmice_critical_print EAL_TRACE_COLOR_PRINT_THREAD(critical)
+#define lmice_info_print        printf("%s:(%d)\n", __FILE__, __LINE__);EAL_TRACE_COLOR_PRINT_THREAD(info)
+#define lmice_debug_print       printf("%s:(%d)\n", __FILE__, __LINE__); EAL_TRACE_COLOR_PRINT_THREAD(debug)
+#define lmice_warning_print     printf("%s:(%d)\n", __FILE__, __LINE__);EAL_TRACE_COLOR_PRINT_THREAD(warning)
+#define lmice_error_print       printf("%s:(%d)\n", __FILE__, __LINE__);EAL_TRACE_COLOR_PRINT_THREAD(error)
+#define lmice_critical_print    printf("%s:(%d)\n", __FILE__, __LINE__);EAL_TRACE_COLOR_PRINT_THREAD(critical)
 
 /*
 #define lmice_info_log(env, format,...) LMICE_TRACE_PER_THREAD(env, lmice_trace_info, format, ##__VA_ARGS__)

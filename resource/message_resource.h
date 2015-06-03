@@ -1,0 +1,4 @@
+#ifndef MESSAGE_RESOURCE_H
+#define MESSAGE_RESOURCE_H
+
+#endif // MESSAGE_RESOURCE_H

@@ -158,6 +158,7 @@ int eal_event_awake(evtfd_t fd) {
 int eal_event_close(evtfd_t fd) {
     int ret = 0;
     ret = sem_close(fd);
+    fd = 0;
     return ret;
 }
 

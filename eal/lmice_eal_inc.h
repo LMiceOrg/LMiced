@@ -4,9 +4,12 @@
 /** Inter-node communication */
 #include "lmice_eal_common.h"
 
+#include <stdint.h>
+
 struct eal_inc_param_s
 {
-    uint64_t id;
+    uint64_t inst_id;
+    uint64_t type_id;
     /* processed by getaddrinfo-bind routine
      * [in] local socket port
      * [in] local socket address
@@ -50,8 +53,8 @@ typedef struct eal_inc_param_s eal_inc_param;
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#define eal_inc_init()
-#define eal_finc_init()
+#define eal_inc_init() 0
+#define eal_inc_finit() 0
 
 #endif
 

@@ -48,7 +48,7 @@ int eal_inc_create_client(eal_inc_param* pm)
     if (ret != 0) {
         ret = errno;
         lmice_error_print("eal_inc_create_client call getaddrinfo[%s] failed[%d (%s)]\n",
-                          pm->remote_addr, ret, gai_strerror(ret));
+                          pm->local_addr, ret, gai_strerror(ret));
         return ret;
     }
 
@@ -62,7 +62,7 @@ int eal_inc_create_client(eal_inc_param* pm)
     ret = getaddrinfo(pm->remote_addr, pm->remote_port, &hints, &remote);
     if (ret != 0) {
         ret = errno;
-        lmice_error_print("eal_inc_create_client call getaddrinfo[%s] failed[%d (%s)]\n",
+        lmice_error_print("eal_inc_create_client call 2 getaddrinfo[%s] failed[%d (%s)]\n",
                           pm->remote_addr, ret, gai_strerror(ret));
         return ret;
     }

@@ -41,5 +41,7 @@ int eal_shm_open_readwrite(lmice_shm_t* shm);
 
 int eal_shm_hash_name(uint64_t hval, char* name);
 
+int eal_shm_create_or_open(lmice_shm_t* shm);
+
 
 #endif /** LMICE_EAL_SHM_H */
