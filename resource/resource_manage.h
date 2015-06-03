@@ -17,14 +17,27 @@
 #include "eal/lmice_trace.h"
 #include "eal/lmice_eal_inc.h"
 #include "eal/lmice_eal_aio.h"
+#include "eal/lmice_eal_thread.h"
 
+extern eal_tls_t task_filter_key;
+
+#include "net/net_beatheart.h"
 
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 
+#include "resource_right.h"
+
+#include "schedule/task_filter.h"
+#include "schedule/task.h"
+
+
+#define ANY_INSTANCE_ID 0LLU
+
 #define PUBLISH_RESOURCE_TYPE  1
 #define SUBSCRIBE_RESOURCE_TYPE  2
+#define SUBSCRIBE_RESOURCESET_TYPE 3
 #define TICKER_TYPE 1
 #define TIMER_TYPE 2
 
@@ -33,6 +46,8 @@
 #define DEFAULT_SHM_SIZE 4096 /** 4KB */
 #define DEFAULT_WORKER_SIZE 200
 #define DEFAULT_RESOURCE_SIZE 128
+
+
 enum schedule_state
 {
     LM_PENDING_STATE = 0,
@@ -70,6 +85,7 @@ struct forcepack(8) lmice_state_s
     uint8_t value[8];
 };
 typedef struct lmice_state_s lm_state_t;
+#define LM_STATE_RESET(st) *((uint64_t*)(st.value)) = 0
 
 struct lmice_shm_resourece_s
 {
@@ -153,18 +169,6 @@ struct lmice_timer_resource_s
 typedef struct lmice_timer_resource_s lm_timer_res_t;
 
 
-
-/**
- * @brief The lmice_message_s struct
- * 消息
- */
-struct lmice_message_s
-{
-    volatile int32_t lock;  /* sync purpose */
-    uint32_t size;          /* blob size( bytes) */
-    char blob[8];
-};
-typedef struct lmice_message_s lm_mesg_t;
 
 /**
  * @brief The lmice_message_info_s struct
@@ -258,11 +262,12 @@ struct lmice_worker_info_s
 };
 typedef struct lmice_worker_info_s lm_worker_info_t;
 
+#define LMICE_WORKER_MESG_RESOURCE_MAX_SIZE 128
 struct lmice_worker_resource_s
 {
     lm_shm_res_t        res;
     lm_worker_info_t*   info;
-    lm_mesg_res_t       mesg[128];
+    lm_mesg_res_t       mesg[LMICE_WORKER_MESG_RESOURCE_MAX_SIZE];
     lm_timer_res_t      timer[128];
     lm_action_res_t     action[128];
 };
@@ -295,13 +300,6 @@ struct lmice_timer_list_s
     lm_timer_res_t      *res_timer;
 };
 typedef struct lmice_timer_list_s lm_tmlist_t;
-
-struct lmice_message_list_s
-{
-    lm_worker_res_t *res_worker;
-    lm_mesg_res_t   *res_mesg;
-};
-typedef struct lmice_message_list_s lm_msglist_t;
 
 
 #ifdef _WIN32
@@ -358,6 +356,54 @@ struct lmice_time_parameter_s
 #endif
 typedef struct lmice_time_parameter_s lm_time_param_t;
 
+#if defined(__APPLE__)
+
+struct lmice_io_parameter_s {
+    eal_thread_t thd;
+    volatile int64_t quit_flag;
+    eal_aio_handle cp;
+    int32_t padding0;
+};
+typedef struct lmice_io_parameter_s lm_io_param_t;
+
+#endif
+
+
+
+/***** scheduled task proc *****/
+#define TASKPROC_LIST_SIZE 32
+#define MAX_TASKPROC_SIZE 32
+
+struct lmice_schedule_task_s
+{
+    volatile int64_t lock;
+    int32_t pd; /* task process direction */
+    int32_t padding0;
+    uint64_t id; /* task id */
+    lmtsk_id_t tid; /* task identity */
+    void* pdata; /* task data */
+};
+typedef struct lmice_schedule_task_s lmshd_task_t;
+
+struct lmice_schedule_ring_s
+{
+    uint64_t read_pos;
+    uint64_t write_pos;
+    lmshd_task_t task[TASKPROC_LIST_SIZE];
+};
+typedef struct lmice_schedule_ring_s lmshd_ring_t;
+
+enum lmice_lock_ring_e
+{
+    LM_RING_NOT_USE = 0,
+    LM_RING_READ = 1,
+    LM_RING_READING = 2,
+    LM_RING_WRITE = 1,
+    LM_RING_WRITING = 2
+};
+
+
+#define DEFAULT_LIST_SIZE 32
 #define TIMER_LIST_SIZE 32
 #define TIMER_LIST_NEXT_POS 0
 #define PERIOD_1 80000LL
@@ -372,17 +418,34 @@ struct lmice_resource_parameter_s
     /* the worker 0 is for server itself */
     lm_worker_res_t res_worker[DEFAULT_WORKER_SIZE];
 
-    /* for scheduler time parameter */
+    /* for task proc quit flag */
+    volatile int64_t taskproc_quit_flag;
+    eal_thread_t taskproc_thread[MAX_TASKPROC_SIZE];
+    uint64_t taskproc_size;
+    lmshd_ring_t taskproc_list;
+    evtfd_t taskproc_evt;
+    pthread_mutex_t taskproc_mutex;
+    pthread_cond_t taskproc_cond;
+
+    /* for time scheduler parameter */
     lm_time_param_t tm_param;
 
-    /** for async-io */
+    /* for io scheduler parameter */
+    lm_io_param_t io_param;
     /* data package */
-    eal_aio_data_list aio_list;
+    eal_aio_data_t aio_list[DEFAULT_LIST_SIZE];
     /* io handle */
     eal_aio_handle cp;
+    /* new list */
+    eal_aio_t new_aio_task[DEFAULT_LIST_SIZE];
+    int new_aio_size;
+    volatile int64_t new_aio_lock;
 
     /* for network server */
     eal_inc_param bh_param;
+    lmnet_bpkg_t  bh_list[DEFAULT_LIST_SIZE];
+    uint64_t bh_revc_flt;
+    uint64_t bh_send_flt;
     /* sync time */
     eal_inc_param st_param;
     /* pub-sub */
@@ -410,14 +473,53 @@ struct lmice_resource_parameter_s
     lm_timer_res_t *timer_worklist4[TIMER_LIST_SIZE];
     lm_timer_res_t *ticker_worklist4[TIMER_LIST_SIZE];
 
-    lm_msglist_t pubmsg_list[128];
-    lm_msglist_t submsg_list[128];
+    /* 资源/资源集合权限列表 */
+    lm_res_list_t res_right;
+    lm_resset_list_t resset_right;
+
+    /* task filter list
+     * condition: data, type, message, instance
+     * direction: in, out
+     * type: pass, termination
+     */
+    lmflt_list_t taskfilter_list[TASK_FILTER_LIST_SIZE];
 
 
 
 
 };
 typedef struct lmice_resource_parameter_s lm_res_param_t;
+
+forceinline int lmres_find_message_from_workers(lm_worker_res_t* worker_list, uint64_t type_id, uint64_t object_id, lm_mesg_res_t*res) {
+    int ret = 1;
+    size_t i = 0;
+    size_t j = 0;
+    lm_worker_res_t *worker = worker_list;
+    for(i=0; i< DEFAULT_WORKER_SIZE; ++i, ++worker) {
+
+        /* check worker using status */
+        if(worker->info->inst_id == 0)
+            continue;
+
+        /* check mesg res */
+        res = worker->mesg;
+        for(j=0; j< LMICE_WORKER_MESG_RESOURCE_MAX_SIZE; ++j, ++res) {
+            if(res->info->type_id == type_id &&
+                    res->info->inst_id == object_id) {
+                ret = 0;
+                break;
+            }
+        }
+
+        /* break when got message resource */
+        if(ret == 0) {
+            break;
+        }
+
+    } /*end-for: worker */
+
+    return ret;
+}
 
 
 forceinline void get_timer_res_list(lm_res_param_t* pm, lm_timer_res_t* val, lm_timer_res_t*** tlist)

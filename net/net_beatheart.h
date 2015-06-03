@@ -5,9 +5,8 @@
 #include <eal/lmice_eal_hash.h>
 #include <eal/lmice_eal_inc.h>
 
-#include "resource/resource_manage.h"
-
 #include "net_manage.h"
+#include "rtspace.h"
 
 /* beatheart type signature :
  * LMice name
@@ -84,7 +83,8 @@ struct lmice_net_beatheart_package_s
     uint8_t  endian;
     uint8_t  padding;
     uint16_t headlen;
-    uint32_t version;
+    uint16_t msglen;
+    uint16_t version;
     char meta_data[16]; /* i[b16]iiiiiii */
     lmnet_bmsg_t  msg;
 };
@@ -92,39 +92,13 @@ typedef struct lmice_net_beatheart_package_s lmnet_bpkg_t;
 
 #define LMNET_BEATHEART_METADATA "i[b16]iiiiiii"
 
-#define LMNET_BEATHEART_LIST_SIZE 36
-struct lmice_net_beatheart_param_s
-{
-    lm_worker_t*    worker;
-    eal_wsa_service_param net_param;
-    lmnet_bpkg_t bh_packge;
-    lmnet_bpkg_t bh_pkg_list[LMNET_BEATHEART_LIST_SIZE];
-};
 
-typedef struct lmice_net_beatheart_param_s lmnet_bprm_t;
-
-/* create beatheart service */
-int lmnet_beatheart_create(lm_res_param_t *res_param);
-/* destroy beatheart service */
-int lmnet_beatheart_destroy(lm_res_param_t *pm);
-
-/* initialize beatheart resource */
-int lmnet_beatheart_init(lmnet_bprm_t* param);
-
-/* finalize beatheart resource */
-int lmnet_beatheart_final(lmnet_bprm_t* bh_param);
 
 /** server mode beartheart routine
  * process incoming beatheart package
  * mantain inter-node state
  * dispatch received data to IO event-poll
 */
-
-/* create server role */
-int lmnet_beatheart_server_create(lmnet_bprm_t* param);
-
-/* delete server role */
-int lmnet_beatheart_server_delete(lmnet_bprm_t* param);
 
 
 /** client mode beartheart routine
@@ -134,12 +108,6 @@ int lmnet_beatheart_server_delete(lmnet_bprm_t* param);
  * gather host loan state
  * timely send [this] node beatheart package
 */
-
-/* create beatheart client role */
-int lmnet_beatheart_client_create(lmnet_bprm_t* bh_param);
-
-/* delete beatheart client role */
-int lmnet_beatheart_client_delete(lmnet_bprm_t* bh_param);
 
 #endif /* NET_BEATHEART_H */
 

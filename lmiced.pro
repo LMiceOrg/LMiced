@@ -9,7 +9,10 @@ resource/resource_manage.c \
     trust/trust_manage.c \
     schedule/action_schedule.c \
     net/net_beatheart.c \
-    net/net_manage.c
+    net/net_manage.c \
+    schedule/task_filter.c \
+    schedule/filter_tls.c \
+    io/io_schedule.c
 #    main.cpp \
 #    resource/resource_shm.cpp \
 #    resource/resource_meta_data.c \
@@ -35,7 +38,13 @@ trust/trust_manage.h \
     net/net_manage.h \
     net/net_manage_win.h \
     net/net_beatheart.h \
-    system/system_syscall.h
+    system/system_syscall.h \
+    io/io_schedule.h \
+    eal/resource_right.h \
+    schedule/task_filter.h \
+    schedule/task.h \
+    resource/message_resource.h \
+    schedule/filter_tls.h
 #    system/system_environment.h \
 #    system/system_signal.h \
 #    system/system_environment_internal.h \
@@ -107,7 +116,7 @@ LIBS += -lws2_32 -lKernel32
 macx-clang*{
 message("LMiced - MacX Darwin")
 
-QMAKE_CFLAGS += -std=c89 -Wall -Weverything -Wno-long-long
+QMAKE_CFLAGS += -std=c89 -Wall -Wno-long-long -Weverything
 QMAKE_CFLAGS += -funit-at-a-time -Wno-unused-function
 QMAKE_CFLAGS += -Dinline=__inline
 
@@ -118,10 +127,11 @@ QMAKE_LFLAGS_DEBUG      += -L../debug_build -lsrc
 QMAKE_LFLAGS_RELEASE    += -L../release_build -lsrc
 
 INCLUDEPATH += ../lib/boost_1_55_0 \
+    ../lib/sglib-1.0.4
 
 #    ../lib/libxml2/include
 
-LIBS += -L../lib/boost_1_55_0/stage/lib \
+LIBS += -L../lib/boost_1_55_0/stage/lib
 
 #    -L../lib/libxml2/.libs
 LIBS += -lxml2

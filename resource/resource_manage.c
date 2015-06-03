@@ -444,6 +444,7 @@ int create_server_resource(lm_shm_res_t* server)
     ret = eal_shm_create(&shm);
     if(ret != 0)
     {
+        eal_shm_destroy(&shm);
         lmice_critical_print("create server shm failed[%d]\n", ret);
         return ret;
     }
@@ -455,6 +456,7 @@ int create_server_resource(lm_shm_res_t* server)
     ret = eal_event_create(&evt);
     if(ret != 0)
     {
+        eal_event_destroy(&evt);
         lmice_critical_print("create server event failed[%d]\n", ret);
         eal_shm_close(shm.fd, shm.addr);
         return ret;
@@ -471,7 +473,6 @@ int create_server_resource(lm_shm_res_t* server)
     server->efd = evt.fd;
     server->sfd = shm.fd;
 
-    lmice_debug_print("server event [%s] id[%p]\n", evt.name, evt.fd);
     return ret;
 }
 
@@ -521,6 +522,23 @@ void forceinline init_tmlist_resource(lm_timer_res_t** tlist)
     memset(tlist[TIMER_LIST_NEXT_POS], 0, sizeof(lm_timer_res_t) );
 }
 
+forceinline void finit_tmlist_resource(lm_timer_res_t** tlist) {
+    free( tlist[TIMER_LIST_NEXT_POS] );
+}
+
+forceinline void finit_server_resource(lm_res_param_t* pm) {
+    finit_tmlist_resource(pm->ticker_duelist);
+    finit_tmlist_resource(pm->ticker_worklist1);
+    finit_tmlist_resource(pm->ticker_worklist2);
+    finit_tmlist_resource(pm->ticker_worklist3);
+    finit_tmlist_resource(pm->ticker_worklist4);
+    finit_tmlist_resource(pm->timer_duelist);
+    finit_tmlist_resource(pm->timer_worklist1);
+    finit_tmlist_resource(pm->timer_worklist2);
+    finit_tmlist_resource(pm->timer_worklist3);
+    finit_tmlist_resource(pm->timer_worklist4);
+}
+
 void forceinline init_server_resource(lm_res_param_t* pm)
 {
     size_t i = 0;
@@ -545,22 +563,23 @@ void forceinline init_server_resource(lm_res_param_t* pm)
     init_tmlist_resource(pm->timer_worklist4);
 }
 
-int create_server_worker_resource(lm_res_param_t* pm)
+forceinline int create_server_worker_resource(lm_res_param_t* pm)
 {
     int ret = 0;
     lmice_event_t   evt;
     lmice_shm_t  shm;
     lm_worker_res_t * worker = pm->res_worker;
-    uint64_t instid;
+    lm_worker_t* wk = NULL;
+    uint64_t worker_id;
     eal_pid_t pid = getpid();
     eal_tid_t tid = 0;
-    instid = eal_hash64_fnv1a(&pid, sizeof(pid));
-    instid = eal_hash64_more_fnv1a(&tid, sizeof(tid), instid);
-    instid = eal_hash64_more_fnv1a(CLIENT_SHMNAME, sizeof(CLIENT_SHMNAME)-1, instid);
+    worker_id = eal_hash64_fnv1a(&pid, sizeof(pid));
+    worker_id = eal_hash64_more_fnv1a(&tid, sizeof(tid), worker_id);
+    worker_id = eal_hash64_more_fnv1a(CLIENT_SHMNAME, sizeof(CLIENT_SHMNAME)-1, worker_id);
 
     eal_shm_zero(&shm);
     shm.size = DEFAULT_SHM_SIZE*16;
-    eal_shm_hash_name(instid, shm.name);
+    eal_shm_hash_name(worker_id, shm.name);
     ret = eal_shm_create(&shm);
     if(ret != 0)
     {
@@ -569,7 +588,7 @@ int create_server_worker_resource(lm_res_param_t* pm)
     }
 
     eal_event_zero(&evt);
-    eal_event_hash_name(instid, evt.name);
+    eal_event_hash_name(worker_id, evt.name);
     ret = eal_event_create(&evt);
     if(ret != 0)
     {
@@ -578,17 +597,26 @@ int create_server_worker_resource(lm_res_param_t* pm)
         return ret;
     }
 
-    /* maintain resource */
+    /* maintain worker's resource manage */
     worker->res.addr = shm.addr;
     worker->res.sfd = shm.fd;
     worker->res.efd = evt.fd;
 
+    /* maintain worker's shared memory */
+    wk = (lm_worker_t*)shm.addr;
+    memset(wk, 0, sizeof(shm.size));
+    wk->version = LMICE_VERSION;
+    wk->size = shm.size;
+    wk->state = WORKER_RUNNING;
+    wk->inst_id = worker_id;
+
+    /* maintain server's worker info */
     worker->info->version = LMICE_VERSION;
     worker->info->state = WORKER_RUNNING;
     worker->info->process_id = pid;
     worker->info->thread_id = tid;
     worker->info->type_id = 0;
-    worker->info->inst_id = instid;
+    worker->info->inst_id = worker_id;
 
     return 0;
 }
@@ -641,7 +669,12 @@ int destroy_resource_service(lm_res_param_t* pm)
     lm_shm_res_t *m_resource = &pm->res_server;
     lm_shm_res_t *m_worker = &pm->res_worker[0].res;
 
-    ret = destroy_server_worker_resource(m_worker);
+    ret = close_worker_resource(pm->res_worker, pm);
+
+    ret |= destroy_server_worker_resource(m_worker);
+
+    finit_server_resource(pm);
+
     ret |= destroy_server_resource(m_resource);
 
     return ret;

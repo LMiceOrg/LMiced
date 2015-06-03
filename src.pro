@@ -13,7 +13,9 @@ SOURCES += eal/lmice_ring.c \
     eal/lmice_eal_event.c \
     eal/lmice_eal_time.c    \
     eal/lmice_core.c \
-    eal/lmice_eal_inc.c
+    eal/lmice_eal_inc.c \
+    eal/lmice_eal_aio.c \
+    eal/lmice_eal_thread.c
 
 
 OTHER_FILES += \

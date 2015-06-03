@@ -188,7 +188,7 @@ static void trust_thread_proc(void* data)
         if(inst->thread_id != 0) {
             pthread_t tid = (pthread_t)(void*)inst->thread_id;
             ret = pthread_kill(tid, 0);
-            if(ret != 0){
+            if(ret != 0) {
                 err = errno;
                 lmice_debug_print("worker thread[%llu] open failed[%d]\n", inst->thread_id, err);
                 memset(inst, 0, sizeof(lm_worker_info_t));

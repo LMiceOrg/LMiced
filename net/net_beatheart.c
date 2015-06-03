@@ -2,6 +2,7 @@
 
 #include "lmice_eal_endian.h"
 #include "lmice_eal_spinlock.h"
+#include "lmice_core.h"
 
 #include "system/system_syscall.h"
 #include <string.h>
@@ -40,27 +41,11 @@ typedef struct lmice_ring_head_s lm_ring_hd;
 */
 
 /* initialize beatheart resource */
-int lmnet_beatheart_init(lmnet_bprm_t* param)
+int lmnet_beatheart_init(lmnet_bpkg_t *pkg)
 {
     int ret = 0;
-    lmnet_bpkg_t *pkg = &(param->bh_packge);
     lmnet_bmsg_t *msg = &(pkg->msg);
     lmnet_bctn_t *ctn = &(msg->ctn);
-    lmnet_bpkg_t *pkglist = param->bh_pkg_list;
-    lm_ring_hd* rhd = (lm_ring_hd*)(void*)pkglist;
-
-    /* create mc socket handle, add membership */
-    ret = eal_wsa_create_mc_handle(&(param->net_param));
-
-    /* init inter-node beatheart list */
-    LMNET_BEATHEART_PKGLIST_INIT(rhd);
-
-    /* register publish beatheart */
-    ret = eal_spin_lock(&param->worker->lock);
-
-    eal_spin_unlock(&param->worker->lock);
-    /* init client package */
-    memset(pkg, 0, sizeof(lmnet_bpkg_t));
 
     /* init package header */
     pkg->endian = eal_is_little_endian();
@@ -89,12 +74,6 @@ int lmnet_beatheart_init(lmnet_bprm_t* param)
 
 }
 
-/* finalize beatheart resource */
-int lmnet_beatheart_final(lmnet_bprm_t* bh_param)
-{
-    /* stop mc socket handle */
-    return 0;
-}
 
 /** server mode beartheart routine
  * process incoming beatheart package
@@ -102,54 +81,28 @@ int lmnet_beatheart_final(lmnet_bprm_t* bh_param)
  * dispatch received data to IO event-poll
 */
 
-/* create server role */
-int lmnet_beatheart_server_create(lmnet_bprm_t* param)
-{
-    int ret = 0;
-    HANDLE hdl = NULL;
-    eal_wsa_service_param* pm = &(param->net_param);
-
-    /* bind handle to event-io */
-    hdl = CreateIoCompletionPort((HANDLE)(pm->hd->nfd),
-                                 pm->cp,
-                                 (ULONG_PTR)pm->hd,
-                                 0);
-    if(hdl == NULL) {
-        lmice_error_print("CreateIoCompletionPort failed\n");
-        closesocket(pm->hd->nfd);
-        eal_wsa_remove_handle(pm->hd);
-        return -1;
+int lmnet_beatheart_recv(void* task, void* pdata) {
+    size_t i = 0;
+    lmnet_bpkg_t* bh_pkg = NULL;
+    eal_aio_data_t *data = (eal_aio_data_t *)pdata;
+    lm_res_param_t *res_param = (lm_res_param_t *)data->pdata;
+    lmnet_bpkg_t* new_pkg = (lmnet_bpkg_t*)data->buff;
+    /* find the position */
+    for(i = 0; i< DEFAULT_LIST_SIZE; ++i) {
+        bh_pkg = res_param->bh_list + i;
+        if(bh_pkg->msg.obj_inst == new_pkg->msg.obj_inst) {
+            /* update beatheart package */
+            memcpy(bh_pkg, new_pkg, sizeof(lmnet_bpkg_t));
+            return 0;
+        } else if(bh_pkg->msg.obj_inst == 0) {
+            /* meet an empty package, so fill it here */
+            memcpy(bh_pkg, new_pkg, sizeof(lmnet_bpkg_t));
+            return 0;
+        }
     }
 
-    /* acquire data from io list */
-    eal_iocp_append_data(pm->ilist, pm->hd->inst_id, &pm->data);
-    pm->data->quit_flag = 0;
-
-    /* start recv routine */
-    WSARecvFrom(pm->hd->nfd,
-                &(pm->data->data),
-                1,
-                &(pm->data->recv_bytes),
-                &(pm->data->flags),
-                (struct sockaddr*)&(pm->hd->addr),
-                &(pm->hd->addrlen),
-                &(pm->data->overlapped),
-                NULL);
-    return ret;
+    lmice_debug_print("receive a new beatheart\n");
 }
-
-/* delete server role */
-int lmnet_beatheart_server_delete(lmnet_bprm_t* param)
-{
-    int ret = 0;
-    eal_wsa_service_param* pm = &(param->net_param);
-
-    /* notice server to quit */
-    pm->data->quit_flag = 1;
-
-    return ret;
-}
-
 
 /** client mode beartheart routine
  * register timer to finish gather task
@@ -157,44 +110,61 @@ int lmnet_beatheart_server_delete(lmnet_bprm_t* param)
  * timely send [this] node beatheart package
 */
 
-/* create beatheart client role */
-int lmnet_beatheart_client_create(lmnet_bprm_t* bh_param)
-{
-    int ret = 0;
-    lmnet_bpkg_t *pkg = &(bh_param->bh_packge);
-    lmnet_bmsg_t *msg = &(pkg->msg);
-    lmnet_bctn_t *ctn = &(msg->ctn);
-
-    return ret;
-}
-
-/* delete beatheart client role */
-int lmnet_beatheart_client_delete(lmnet_bprm_t* bh_param)
-{
+int lmnet_beatheart_send(void* task, void* pdata) {
+    lm_res_param_t *res_param = (lm_res_param_t *)pdata;
+    lmnet_bpkg_t* bh_pkg = res_param->bh_list;
+    struct addrinfo* remote = res_param->bh_param.remote;
+    lmnet_bctn_t* ctn = &bh_pkg->msg.ctn;
+    int sock = res_param->bh_param.sock_client;
+    ssize_t sz = 0;
     int ret = 0;
 
-    return ret;
+
+    /* update beatheart state */
+    eal_core_get_properties(&ctn->lcore_size, &ctn->memory_size, &ctn->net_bankwidth);
+    /* send beatheart package */
+    sz=sendto(sock, bh_pkg, sizeof(lmnet_bpkg_t), 0, remote->ai_addr, remote->ai_addrlen);
+    if(sz == -1) {
+        ret = errno;
+        lmice_error_print("lmnet_beatheart_send call sendto failed[%d]\n", ret, remote->ai_addrlen);
+    } else {
+        lmice_debug_print("lmnet_beatheart_send successfully finished\n");
+    }
+
 }
 
 /* create beatheart service */
 int lmnet_beatheart_create(lm_res_param_t *res_param)
 {
     int ret = 0;
-    lm_worker_res_t *worker = res_param->res_worker[0];
+    uint64_t timer_id;
+    lm_worker_res_t *worker = res_param->res_worker;
 
-    lmice_critical_print("sizeof lmnet_bprm_t %u\n", sizeof(lmnet_bprm_t));
 //    lmnet_bprm_t* param = (lmnet_bprm_t*)malloc(sizeof(lmnet_bprm_t));
     eal_inc_param *pm = &(res_param->bh_param);
     /* sock create */
     eal_inc_create_client(pm);
     eal_inc_create_server(pm);
+
+    pm->type_id = lmice_net_beatheart_type();
+    pm->inst_id = lmice_net_beatheart_inst(0, pm->local_addr);
+
+    /* register publish */
+    lmsys_register_publish(&res_param->res_right, worker, pm->type_id, pm->inst_id, sizeof(lmnet_bpkg_t));
     /* register timer-event 30 seconds */
-    lmsys_register_timer(worker, 0, getpid(), 300000000, 0, 0, &pm->id);
-    /* register timer-callback for send beatheart */
+    lmsys_register_timer(worker, getpid(), 300000000, 0, 0, &timer_id);
+    /* register timer-callback for send beatheart (act as client) */
+    lmsys_register_timer_callback(res_param->taskfilter_list, timer_id, res_param, lmnet_beatheart_send, &res_param->bh_send_flt);
 
+    /* register subscribe */
+    lmsys_register_subscribe_type(&res_param->resset_right, worker, pm->type_id, 0);
+    /* register io-callback for receive beatheart (act as server) */
+    lmsys_register_recv_event(res_param, pm->sock_server, pm->type_id);
+    /* register package filter for receive beatheart (act as task filter) */
+    lmsys_register_recv_callback(res_param->taskfilter_list, pm->type_id,
+                                 ANY_INSTANCE_ID, res_param, lmnet_beatheart_recv, &res_param->bh_revc_flt);
 
-//    lmnet_beatheart_server_create(param);
-//    lmnet_beatheart_client_create(param);
+    /* notify worker */
     return ret;
 }
 

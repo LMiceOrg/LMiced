@@ -2,7 +2,7 @@
 
 #include "eal/lmice_trace.h"
 #include "eal/lmice_eal_inc.h"
-
+#include "resource/resource_manage.h"
 #include "rtspace.h"
 
 //int net_wsa_close_mc_handle(eal_wsa_handle *hd)
@@ -181,6 +181,12 @@
 //}
 
 #include "net_beatheart.h"
+
+/* create beatheart service */
+int lmnet_beatheart_create(lm_res_param_t *res_param);
+/* destroy beatheart service */
+int lmnet_beatheart_destroy(lm_res_param_t *pm);
+
 
 int create_network_server(lm_res_param_t *pm)
 {

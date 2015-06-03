@@ -18,5 +18,9 @@
 int create_schedule_service(lm_res_param_t* pm);
 int destroy_schedule_service(lm_res_param_t* pm);
 
+void schedule_task_proc(void* pdata);
+
+
+
 #endif /* ACTION_SCHEDULE_H */
 
