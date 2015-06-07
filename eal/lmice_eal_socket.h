@@ -5,6 +5,12 @@
 
 #include "eal/lmice_eal_common.h"
 
+#if defined(_WIN32)
+#define eal_socket_t SOCKET
+#elif defined(__APPLE__) || defined(__LINUX__)
+#define eal_socket_t int
+#endif
+
 enum lmice_socket_data_e
 {
     LMICE_SOCKET_DATA_NOTUSE = 0,
@@ -18,7 +24,7 @@ struct lmice_socket_data_s
 {
     uint64_t inst_id;
     int state;
-    SOCKET nfd;
+    eal_socket_t nfd;
     SOCKADDR_STORAGE addr;
 };
 typedef struct lmice_socket_data_s lm_socket_dt;
@@ -80,15 +86,15 @@ int forceinline create_socket_data(lm_socket_dt* cl, lm_socket_dt** val)
     return 0;
 }
 
-int forceinline delete_socket_data(lm_handle_data_t* cl, const lm_handle_data_t* val)
+int forceinline delete_socket_data(lm_socket_dt* cl, const lm_socket_dt* val)
 {
-    lm_hd_head_t* head = NULL;
-    lm_handle_data_t* cur = NULL;
+    lm_socket_ht* head = NULL;
+    lm_socket_dt* cur = NULL;
     size_t i = 0;
-    head = (lm_hd_head_t*)cl;
+    head = (lm_socket_ht*)cl;
     do {
         for( i= 1; i < LMICE_SOCKET_DATA_LIST_SIZE; ++i) {
-            *cur = cl+i;
+            cur = cl+i;
             if(cur->state == LMICE_SOCKET_DATA_USING &&
                     cur == val) {
                 cur->state = LMICE_SOCKET_DATA_NOTUSE;

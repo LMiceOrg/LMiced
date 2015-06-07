@@ -34,6 +34,8 @@ eal_pid_t forceinline getpid(void)
     return GetCurrentProcessId();
 }
 
+DWORD WINAPI eal_thread_thread( LPVOID lpThreadParameter );
+
 forceinline int eal_thread_create(HANDLE* thread, lm_thread_ctx_t* ctx)
 {
     *thread = CreateThread(NULL, 0, eal_thread_thread, ctx, 0, NULL);

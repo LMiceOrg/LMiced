@@ -3,6 +3,7 @@
 
 /** Inter-node communication */
 #include "lmice_eal_common.h"
+#include "lmice_eal_socket.h"
 
 #include <stdint.h>
 
@@ -33,8 +34,8 @@ struct eal_inc_param_s
     int ttl;
     int padding0;
 
-    int sock_client;
-    int sock_server;
+    eal_socket_t sock_client;
+    eal_socket_t sock_server;
 
     struct addrinfo *remote;
 };

@@ -84,7 +84,7 @@ int eal_inc_create_server(eal_inc_param *pm) {
     }
 
     /* set reuse port to on to allow multiple binds per host */
-    if ((setsockopt(pm->sock_server, SOL_SOCKET, SO_REUSEADDR, &flag_on,
+    if ((setsockopt(pm->sock_server, SOL_SOCKET, SO_REUSEADDR, (const char*)&flag_on,
                     sizeof(flag_on))) < 0) {
         ret = errno;
         lmice_error_print("eal_inc_create_server call setsockopt(REUSEADDR) failed[%d]\n", ret);

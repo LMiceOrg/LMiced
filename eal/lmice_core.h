@@ -27,7 +27,7 @@ typedef struct lmice_environment_s lmice_environment_t;
 
 #include <Iphlpapi.h>
 /* Library iphlpapi.lib */
-forceinline int get_net_bandwidth(uint32_t *net_bandwidth)
+forceinline int eal_get_net_bandwidth(uint32_t *net_bandwidth)
 {
     DWORD dret = 0;
     DWORD buff_len = 0;
@@ -61,7 +61,7 @@ forceinline int get_net_bandwidth(uint32_t *net_bandwidth)
     return 0;
 }
 
-forceinline void get_core_properties(uint32_t* lcore, uint32_t* mem, uint32_t* net_bandwidth)
+forceinline void eal_core_get_properties(uint32_t* lcore, uint32_t* mem, uint32_t* net_bandwidth)
 {
     ULONGLONG memkilo = 0;
     SYSTEM_INFO mySysInfo;
@@ -75,7 +75,7 @@ forceinline void get_core_properties(uint32_t* lcore, uint32_t* mem, uint32_t* n
     *mem = memkilo / 1024;
 
     /* get device [0] bandwidth */
-    get_net_bandwidth(net_bandwidth);
+    eal_get_net_bandwidth(net_bandwidth);
 
 }
 #elif defined(__APPLE__)

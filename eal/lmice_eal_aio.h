@@ -4,6 +4,7 @@
 /** Async IO */
 #include "lmice_eal_common.h"
 #include <stdlib.h>
+#include <stdint.h>
 
 struct lmice_aio_context_s {
     /* =1 quit */
