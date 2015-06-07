@@ -32,7 +32,8 @@ enum eal_iocp_operation_e
 /* iocp 数据结构 */
 struct eal_iocp_data_s
 {
-    uint64_t inst_id;
+    uint64_t id;
+    void* pdata;
     int operation;
     int quit_flag;
     WSABUF data;
@@ -40,7 +41,7 @@ struct eal_iocp_data_s
     DWORD recv_bytes;
     DWORD flags;
 
-    char buffer[EAL_IOCP_BUFFER_SIZE];
+    char buff[EAL_IOCP_BUFFER_SIZE];
 };
 typedef struct eal_iocp_data_s eal_iocp_data;
 
@@ -83,11 +84,11 @@ forceinline int eal_iocp_append_data(eal_iocp_data_list* pb, uint64_t inst_id, e
         for(i=0; i< EAL_IOCP_BUFFER_LENGTH; ++i)
         {
             cur = &(pb->data_array[i]);
-            if(cur->inst_id == 0)
+            if(cur->id == 0)
             {
-                cur->inst_id = inst_id;
+                cur->id = inst_id;
                 cur->data.len = EAL_IOCP_BUFFER_SIZE;
-                cur->data.buf = cur->buffer;
+                cur->data.buf = cur->buff;
                 *data = cur;
                 return 0;
             }
@@ -102,9 +103,9 @@ forceinline int eal_iocp_append_data(eal_iocp_data_list* pb, uint64_t inst_id, e
         next->next = pb;
 
         cur = &(pb->data_array[0]);
-        cur->inst_id = inst_id;
+        cur->id = inst_id;
         cur->data.len = EAL_IOCP_BUFFER_SIZE;
-        cur->data.buf = cur->buffer;
+        cur->data.buf = cur->buff;
         *data = cur;
 
     }
@@ -115,7 +116,7 @@ forceinline int eal_iocp_append_data(eal_iocp_data_list* pb, uint64_t inst_id, e
 
 forceinline void eal_iocp_remove_data(eal_iocp_data* bt)
 {
-    bt->inst_id = 0;
+    bt->id = 0;
 }
 
 
@@ -202,6 +203,15 @@ forceinline void eal_remove_iocp_buffer(char* buffer)
     bt->inst_id = 0;
 }
 
+forceinline int eal_append_iocp_handle(eal_iocp_handle cp, eal_iocp_handle sock, uint64_t id) {
+    HANDLE hdl;
+    /* 将接受套接字和完成端口关联 */
+    hdl = CreateIoCompletionPort(sock,
+                                 cp,
+                                 (ULONG_PTR)id,
+                                 0);
+    return hdl == NULL?1:0;
+}
 
 forceinline int eal_create_iocp_handle(HANDLE* cp)
 {

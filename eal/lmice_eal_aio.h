@@ -24,10 +24,14 @@ typedef struct lmice_aio_context_s lm_aio_ctx_t;
 
 #if defined(_WIN32)
 #include "lmice_eal_iocp.h"
+#define eal_aio_data_t eal_iocp_data
 #define eal_aio_data_list eal_iocp_data_list
 #define eal_aio_handle eal_iocp_handle
+#define eal_aio_t HANDLE
 
 #define eal_aio_create_handle eal_create_iocp_handle
+
+#define eal_aio_add_read(cp, sock, id) eal_append_iocp_handle(cp, sock, id)
 #elif defined(__APPLE__)
 
 #include <pthread.h>

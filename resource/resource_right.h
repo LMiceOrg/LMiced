@@ -1,4 +1,4 @@
-#ifndef RESOURCE_RIGHT_H
+﻿#ifndef RESOURCE_RIGHT_H
 #define RESOURCE_RIGHT_H
 
 /** 资源权限 */

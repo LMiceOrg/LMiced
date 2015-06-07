@@ -51,7 +51,7 @@ forceinline eal_tid_t eal_gettid()
 
 #elif defined(_WIN32) && defined(_MSC_VER) /** MSC */
     #include "lmice_eal_thread_win.h"
-    #define eal_tls_t __declspec( thread )
+
 
 #elif defined(__MINGW32__)
 #include "lmice_eal_thread_pthread.h"

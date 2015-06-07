@@ -19,7 +19,8 @@ forceinline int eal_thread_create(eal_thread_t* thread, lm_thread_ctx_t* ctx)
     return ret;
 }
 
+#define eal_create_tls(key) pthread_key_create(&key, NULL)
 #define eal_get_tls_value(key, type, val) val=(type)pthread_getspecific(key)
 #define eal_set_tls_value(key, val) pthread_setspecific(key, val)
-
+#define eal_delete_tls(key) pthread_key_delete(key)
 #endif /** LMICE_EAL_THREAD_PTHREAD_H */

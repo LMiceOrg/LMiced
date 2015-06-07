@@ -1,5 +1,6 @@
 #include "io_schedule.h"
 
+#if defined(__APPLE__)
 void io_thread_proc(void* pdata)
 {
     lm_res_param_t* pm = (lm_res_param_t*)pdata;
@@ -29,6 +30,47 @@ void io_thread_proc(void* pdata)
 
 }
 
+#elif defined(_WIN32)
+void io_thread_proc(void* pdata) {
+    HANDLE CompletionPort = (HANDLE)pdata;
+    DWORD BytesTransferred;
+    LPOVERLAPPED IpOverlapped;
+    eal_wsa_handle* PerHandleData = NULL;
+    /*lm_io_data_t* PerIoData = NULL;*/
+    DWORD RecvBytes;
+    DWORD Flags = 0;
+    BOOL bRet = false;
+
+    while(true){
+        bRet = GetQueuedCompletionStatus(CompletionPort, &BytesTransferred, (PULONG_PTR)&PerHandleData, (LPOVERLAPPED*)&IpOverlapped, INFINITE);
+        if(bRet == 0){
+            cerr << "GetQueuedCompletionStatus Error: " << GetLastError() << endl;
+            return -1;
+        }
+        PerIoData = (lm_io_data_t*)CONTAINING_RECORD(IpOverlapped, lm_io_data_t, overlapped);
+
+        // 检查在套接字上是否有错误发生
+        if(0 == BytesTransferred){
+            closesocket(PerHandleData->nfd);
+            GlobalFree(PerHandleData);
+            GlobalFree(PerIoData);
+            continue;
+        }
+
+        // 开始数据处理，接收来自客户端的数据
+
+        // 为下一个重叠调用建立单I/O操作数据
+        ZeroMemory(&(PerIoData->overlapped), sizeof(OVERLAPPED)); // 清空内存
+        PerIoData->databuff.len = 1024;
+        PerIoData->databuff.buf = PerIoData->buffer;
+        PerIoData->operationType = 0;	// read
+        WSARecv(PerHandleData->nfd, &(PerIoData->databuff), 1, &RecvBytes, &Flags, &(PerIoData->overlapped), NULL);
+    }
+
+    return 0;
+}
+
+#endif
 int create_io_thread(lm_res_param_t* pm)
 {
     int ret = 0;

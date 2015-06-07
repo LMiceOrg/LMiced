@@ -115,10 +115,11 @@ int lmnet_beatheart_send(void* task, void* pdata) {
     lmnet_bpkg_t* bh_pkg = res_param->bh_list;
     struct addrinfo* remote = res_param->bh_param.remote;
     lmnet_bctn_t* ctn = &bh_pkg->msg.ctn;
-    int sock = res_param->bh_param.sock_client;
-    ssize_t sz = 0;
+    eal_socket_t sock = res_param->bh_param.sock_client;
+    int sz = 0;
     int ret = 0;
 
+    (void)task;
 
     /* update beatheart state */
     eal_core_get_properties(&ctn->lcore_size, &ctn->memory_size, &ctn->net_bankwidth);
@@ -131,6 +132,7 @@ int lmnet_beatheart_send(void* task, void* pdata) {
         lmice_debug_print("lmnet_beatheart_send successfully finished\n");
     }
 
+    return ret;
 }
 
 /* create beatheart service */

@@ -3,6 +3,8 @@
 
 #include "lmice_eal_common.h"
 
+#define eal_thread __declspec(Thread)
+#define eal_tls_t DWORD
 #define eal_thread_t HANDLE
 forceinline eal_pid_t eal_gettid(void)
 {
@@ -43,6 +45,11 @@ forceinline int eal_thread_create(HANDLE* thread, lm_thread_ctx_t* ctx)
         return 0;
     return 1;
 }
+#define eal_create_tls(key) *key=TlsAlloc()
+#define eal_get_tls_value(key, type, val) val=(type)TlsGetValue(key)
+#define eal_set_tls_value(key, val) TlsSetValue(key, val)
+#define eal_delete_tls(key) TlsFree(key)
+
 
 #endif /** LMICE_EAL_THREAD_WIN_H */
 

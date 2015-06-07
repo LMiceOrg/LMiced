@@ -7,7 +7,7 @@
 
 #include "eal/lmice_eal_common.h"
 #include "eal/lmice_trace.h"
-
+#include "eal/lmice_eal_thread.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -21,7 +21,7 @@ eal_tls_t task_filter_key;
 
 int main(int argc, char* argv[]) {
 
-    pthread_key_create(&task_filter_key, NULL);
+    eal_create_tls(&task_filter_key);
 
     if(argc > 1) {
         if(strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 
     }
 
-    pthread_key_delete(task_filter_key);
+    eal_delete_tls(task_filter_key);
     lmice_critical_print("LMiced shutdown service\n");
     return 0;
 }

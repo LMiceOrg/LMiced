@@ -366,6 +366,15 @@ struct lmice_io_parameter_s {
 };
 typedef struct lmice_io_parameter_s lm_io_param_t;
 
+#elif defined(_WIN32)
+
+struct lmice_io_parameter_s {
+    eal_thread_t thd;
+    volatile int64_t quit_flag;
+    eal_aio_handle cp;
+};
+typedef struct lmice_io_parameter_s lm_io_param_t;
+
 #endif
 
 
@@ -424,8 +433,10 @@ struct lmice_resource_parameter_s
     uint64_t taskproc_size;
     lmshd_ring_t taskproc_list;
     evtfd_t taskproc_evt;
+    /*
     pthread_mutex_t taskproc_mutex;
     pthread_cond_t taskproc_cond;
+    */
 
     /* for time scheduler parameter */
     lm_time_param_t tm_param;
@@ -433,7 +444,7 @@ struct lmice_resource_parameter_s
     /* for io scheduler parameter */
     lm_io_param_t io_param;
     /* data package */
-    eal_aio_data_t aio_list[DEFAULT_LIST_SIZE];
+    /*eal_aio_data_t aio_list[DEFAULT_LIST_SIZE];*/
     /* io handle */
     eal_aio_handle cp;
     /* new list */
