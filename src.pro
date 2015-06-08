@@ -49,7 +49,8 @@ HEADERS += \
     eal/lmice_eal_socket.h \
     eal/lmice_eal_inc.h \
     eal/lmice_eal_aio.h \
-    eal/lmice_eal_kqueue.h
+    eal/lmice_eal_kqueue.h \
+    eal/lmice_eal_rwlock.h
 
 #Common config
 INCLUDEPATH += eal
@@ -87,8 +88,8 @@ QMAKE_CFLAGS_WARN_ON    = /W4
 #QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
 
-QMAKE_CFLAGS_DEBUG = /MTd /O2 -DDEBUG -D_DEBUG -DSTDC89
-QMAKE_CFLAGS_RELEASE = /MT /O2 -DSTDC89
+QMAKE_CFLAGS_DEBUG = /MTd /O2 -DDEBUG -D_DEBUG #-DSTDC89
+QMAKE_CFLAGS_RELEASE = /MT /O2 #-DSTDC89
 
 QMAKE_CXXFLAGS_DEBUG = /MTd /O2
 QMAKE_CXXFLAGS_RELEASE = /MT /O2
