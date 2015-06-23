@@ -79,9 +79,9 @@ QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
 win32-msvc* {
 
 message("Windows MSVC")
-DEFINES += _USING_V110_SDK71_
-INCLUDEPATH += "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Include"
-LIBS += -L"C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Lib/x64"
+#DEFINES += _USING_V110_SDK71_
+#INCLUDEPATH += "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Include"
+#LIBS += -L"C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Lib/x64"
 
 QMAKE_CFLAGS_WARN_ON    = /W4
 #-Wall

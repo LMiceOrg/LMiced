@@ -32,6 +32,16 @@ typedef struct lmice_aio_context_s lm_aio_ctx_t;
 #define eal_aio_create_handle eal_create_iocp_handle
 
 #define eal_aio_add_read(cp, sock, id) eal_append_iocp_handle(cp, sock, id)
+
+forceinline int eal_aio_create(eal_aio_t* thd, lm_aio_ctx_t* ctx)
+{
+    (void)thd;
+    (void)ctx;
+    return 0;
+}
+
+#define eal_aio_destroy(ctx) (void)ctx
+
 #elif defined(__APPLE__)
 
 #include <pthread.h>

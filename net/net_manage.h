@@ -55,15 +55,9 @@ struct lmice_net_data_content_s
 typedef struct lmice_net_data_content_s lmnet_ctn_t;
 
 
-#ifdef _WIN32
 
-/**
-  Windows IOCP
-*/
-//#include "net_manage_win.h"
 #include "rtspace.h"
 
-#endif
 
 /** beatheart service */
 /** ntp service */

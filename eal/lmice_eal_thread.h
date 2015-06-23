@@ -22,6 +22,7 @@ typedef struct lmice_thread_context_s lm_thread_ctx_t;
 #define eal_thread_free_context(ctx) \
     free(ctx); \
 
+
 #if defined(_WIN32)
 typedef uint32_t eal_tid_t;
 typedef int32_t  eal_pid_t;

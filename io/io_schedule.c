@@ -31,43 +31,43 @@ void io_thread_proc(void* pdata)
 }
 
 #elif defined(_WIN32)
+
 void io_thread_proc(void* pdata) {
-    HANDLE CompletionPort = (HANDLE)pdata;
-    DWORD BytesTransferred;
-    LPOVERLAPPED IpOverlapped;
-    eal_wsa_handle* PerHandleData = NULL;
-    /*lm_io_data_t* PerIoData = NULL;*/
-    DWORD RecvBytes;
-    DWORD Flags = 0;
-    BOOL bRet = false;
+//    HANDLE CompletionPort = (HANDLE)pdata;
+//    DWORD BytesTransferred;
+//    LPOVERLAPPED IpOverlapped;
+//    eal_wsa_handle* PerHandleData = NULL;
+//    /*lm_io_data_t* PerIoData = NULL;*/
+//    DWORD RecvBytes;
+//    DWORD Flags = 0;
+//    BOOL bRet = 0;
 
-    while(true){
-        bRet = GetQueuedCompletionStatus(CompletionPort, &BytesTransferred, (PULONG_PTR)&PerHandleData, (LPOVERLAPPED*)&IpOverlapped, INFINITE);
-        if(bRet == 0){
-            cerr << "GetQueuedCompletionStatus Error: " << GetLastError() << endl;
-            return -1;
-        }
-        PerIoData = (lm_io_data_t*)CONTAINING_RECORD(IpOverlapped, lm_io_data_t, overlapped);
+//    while(1){
+//        bRet = GetQueuedCompletionStatus(CompletionPort, &BytesTransferred, (PULONG_PTR)&PerHandleData, (LPOVERLAPPED*)&IpOverlapped, INFINITE);
+//        if(bRet == 0){
+//            //cerr << "GetQueuedCompletionStatus Error: " << GetLastError() << endl;
+//            break;
+//        }
+//        PerIoData = (lm_io_data_t*)CONTAINING_RECORD(IpOverlapped, lm_io_data_t, overlapped);
 
-        // 检查在套接字上是否有错误发生
-        if(0 == BytesTransferred){
-            closesocket(PerHandleData->nfd);
-            GlobalFree(PerHandleData);
-            GlobalFree(PerIoData);
-            continue;
-        }
+//        // 检查在套接字上是否有错误发生
+//        if(0 == BytesTransferred){
+//            closesocket(PerHandleData->nfd);
+//            GlobalFree(PerHandleData);
+//            GlobalFree(PerIoData);
+//            continue;
+//        }
 
-        // 开始数据处理，接收来自客户端的数据
+//        // 开始数据处理，接收来自客户端的数据
 
-        // 为下一个重叠调用建立单I/O操作数据
-        ZeroMemory(&(PerIoData->overlapped), sizeof(OVERLAPPED)); // 清空内存
-        PerIoData->databuff.len = 1024;
-        PerIoData->databuff.buf = PerIoData->buffer;
-        PerIoData->operationType = 0;	// read
-        WSARecv(PerHandleData->nfd, &(PerIoData->databuff), 1, &RecvBytes, &Flags, &(PerIoData->overlapped), NULL);
-    }
+//        // 为下一个重叠调用建立单I/O操作数据
+//        ZeroMemory(&(PerIoData->overlapped), sizeof(OVERLAPPED)); // 清空内存
+//        PerIoData->databuff.len = 1024;
+//        PerIoData->databuff.buf = PerIoData->buffer;
+//        PerIoData->operationType = 0;	// read
+//        WSARecv(PerHandleData->nfd, &(PerIoData->databuff), 1, &RecvBytes, &Flags, &(PerIoData->overlapped), NULL);
+//    }
 
-    return 0;
 }
 
 #endif
