@@ -18,6 +18,12 @@
 int create_schedule_service(lm_res_param_t* pm);
 int destroy_schedule_service(lm_res_param_t* pm);
 
+/**
+ * @brief schedule_task_proc
+ *  任务调度过程
+ * @param pdata
+ *  上下文(平台运行环境)
+ */
 void schedule_task_proc(void* pdata);
 
 

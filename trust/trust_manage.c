@@ -23,7 +23,7 @@ forceinline void trust_resource_compute(lm_trust_t* pt) {
     int ret = 0;
     lm_worker_info_t *inst=NULL;
     lm_server_t *server = pt->server;
-    ret = eal_spin_lock(&server->lock);
+    ret = eal_spin_lock(&server->board.lock);
     for(inst = &server->worker, pos = 0; pos < DEFAULT_WORKER_SIZE; ++inst, ++pos) {
         HANDLE hProcess = NULL;
         HANDLE hThread = NULL;
@@ -76,7 +76,7 @@ forceinline void trust_resource_compute(lm_trust_t* pt) {
         }
 
     }
-    eal_spin_unlock(&server->lock);
+    eal_spin_unlock(&server->board.lock);
 }
 
 

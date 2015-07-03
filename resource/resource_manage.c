@@ -203,21 +203,22 @@ void forceinline init_worker_resource(lm_worker_res_t* worker)
     size_t i = 0;
     lm_worker_t* inst = (lm_worker_t*)worker->res.addr;
     lmice_critical_print("init worker resource %p\n", inst);
+
     for(i=0; i<128; ++i)
     {
         worker->mesg[i].addr = 0;
-        worker->mesg[i].info = &inst->mesg[i];
+        worker->mesg[i].info = NULL;
     }
     for(i=0; i<128; ++i)
     {
         worker->timer[i].active = LM_TIMER_NOTUSE;
-        worker->timer[i].info = &inst->timer[i];
+        worker->timer[i].info = NULL;
         worker->timer[i].worker = worker;
     }
     for(i=0; i<128; ++i)
     {
         worker->action[i].active = 0;
-        worker->action[i].info = &inst->action[i];
+        worker->action[i].info = NULL;
     }
 }
 
@@ -301,7 +302,7 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
     lmice_debug_print("call maintain worker resource\n");
 
     server = (lm_server_t*)pm->res_server.addr;
-    eal_spin_lock(&server->lock);
+    eal_spin_lock(&server->board.lock);
     for(i=0; i<DEFAULT_WORKER_SIZE; ++i)
     {
         worker = pm->res_worker +i;
@@ -349,7 +350,7 @@ void forceinline maintain_worker_resource(lm_res_param_t* pm)
         }
 
     }
-    eal_spin_unlock(&server->lock);
+    eal_spin_unlock(&server->board.lock);
 }
 #ifdef _WIN32
 
@@ -463,12 +464,21 @@ int create_server_resource(lm_shm_res_t* server)
     }
 
     m_server = (lm_server_t*)((void*)(shm.addr));
-    m_server->event_id = hval;
-    m_server->lock = 0;
-    m_server->size = shm.size;
-    m_server->version = LMICE_VERSION;
-    m_server->next_id = 0;
+    memset(m_server, 0, sizeof(lm_server_t));
+    /* update server: board */
+    m_server->board.version = LMICE_VERSION;
+    m_server->board.state = 0;
+    m_server->board.size = shm.size;
+    m_server->board.next_id = 0;
+    m_server->board.lock = 0;
+    m_server->board.inst_id = hval;
+    m_server->board.type_id = hval;
+    /* update server:time */
+    /* update server:worker_info */
+    m_server->worker_capacity = (shm.size - ( (size_t)&(((lm_server_t*)0)->worker) - (size_t)&(((lm_server_t*)0)->board) )) / sizeof( lm_worker_info_t );
+    m_server->worker_size = 0;
 
+    /* update server_res */
     server->addr = shm.addr;
     server->efd = evt.fd;
     server->sfd = shm.fd;
@@ -571,11 +581,12 @@ forceinline int create_server_worker_resource(lm_res_param_t* pm)
     lm_worker_res_t * worker = pm->res_worker;
     lm_worker_t* wk = NULL;
     uint64_t worker_id;
+    uint64_t type_id;
     eal_pid_t pid = getpid();
     eal_tid_t tid = 0;
-    worker_id = eal_hash64_fnv1a(&pid, sizeof(pid));
+    type_id = eal_hash64_fnv1a(CLIENT_SHMNAME, sizeof(CLIENT_SHMNAME)-1);
+    worker_id = eal_hash64_more_fnv1a(&pid, sizeof(pid),type_id);
     worker_id = eal_hash64_more_fnv1a(&tid, sizeof(tid), worker_id);
-    worker_id = eal_hash64_more_fnv1a(CLIENT_SHMNAME, sizeof(CLIENT_SHMNAME)-1, worker_id);
 
     eal_shm_zero(&shm);
     shm.size = DEFAULT_SHM_SIZE*16;
@@ -605,17 +616,19 @@ forceinline int create_server_worker_resource(lm_res_param_t* pm)
     /* maintain worker's shared memory */
     wk = (lm_worker_t*)shm.addr;
     memset(wk, 0, sizeof(shm.size));
-    wk->version = LMICE_VERSION;
-    wk->size = shm.size;
-    wk->state = WORKER_RUNNING;
-    wk->inst_id = worker_id;
+    wk->board.version = LMICE_VERSION;
+    wk->board.state = WORKER_RUNNING;
+    wk->board.size = shm.size;
+    wk->board.inst_id = worker_id;
+    wk->board.type_id = worker_id;
+    wk->res_capacity = (shm.size - ( (size_t)&(((lm_worker_t*)0)->res) - (size_t)&(((lm_worker_t*)0)->board) ))/ sizeof(lm_res_info_t);
 
     /* maintain server's worker info */
     worker->info->version = LMICE_VERSION;
     worker->info->state = WORKER_RUNNING;
     worker->info->process_id = pid;
     worker->info->thread_id = tid;
-    worker->info->type_id = 0;
+    worker->info->type_id = type_id;
     worker->info->inst_id = worker_id;
 
     return 0;

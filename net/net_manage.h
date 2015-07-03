@@ -32,10 +32,10 @@ struct lmice_net_package_header_s
 {
     uint8_t endian;
     uint8_t padding;
-    uint16_t headlen;
-    uint16_t msglen;
     uint16_t version;
-    char meta_data[8];
+    uint16_t headlen; /* 8 + meta_data's size */
+    uint16_t msglen;
+    char meta_data[8];  /* length [0, 2**16) */
 };
 typedef struct lmice_net_package_header_s lmnet_pkg_t;
 

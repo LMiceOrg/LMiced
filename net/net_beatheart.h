@@ -64,6 +64,7 @@ typedef struct lmice_net_beatheart_data_content_s lmnet_bctn_t;
 #define LMICE_NET_CFG_IPV4 0
 #define LMICE_NET_CFG_IPV6 (1<<0)
 #define LMICE_NET_CFG_AREA(x) (x) << 24  /* x in range[0, 255] */
+#define LMICE_NET_CFG_SUBNET(x) (x) << 16   /* x in range [0, 255] */
 
 
 struct lmice_net_beatheart_message_s

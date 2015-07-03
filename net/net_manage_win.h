@@ -2,7 +2,6 @@
 #define NET_MANAGE_WIN_H
 
 #include "eal/lmice_eal_common.h"
-#include "eal/lmice_ring.h"
 #include "eal/lmice_trace.h"
 #include "eal/lmice_eal_spinlock.h"
 

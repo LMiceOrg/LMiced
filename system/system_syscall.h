@@ -84,10 +84,13 @@ lmsys_register_publish(lm_res_list_t*rr_list, lm_worker_res_t* worker, uint64_t 
         return ret;
 
     wk = (lm_worker_t *)worker->res.addr;
-    eal_spin_lock(&wk->lock);
+    eal_spin_lock(&wk->board.lock);
 
-    for(i=0; i<128; ++i ) {
+    /* for(i=0; i<128; ++i ) {
         info = wk->mesg +i;
+    */
+    for(i=0; i<wk->res_capacity; ++i) {
+        info = &wk->res[i].message;
         res = worker->mesg + i;
         if(info->inst_id == 0) {
             ret = lmsys_create_publish_message(res, inst_id, size);
@@ -103,7 +106,7 @@ lmsys_register_publish(lm_res_list_t*rr_list, lm_worker_res_t* worker, uint64_t 
         }
     }
 
-    eal_spin_unlock(&wk->lock);
+    eal_spin_unlock(&wk->board.lock);
     return ret;
 
 }
@@ -127,15 +130,17 @@ lmsys_register_subscribe(lm_res_list_t*rr_list, lm_worker_res_t* worker, uint64_
 
 
     wk = (lm_worker_t *)worker->res.addr;
-    ret = eal_spin_trylock(&wk->lock);
+    ret = eal_spin_trylock(&wk->board.lock);
     if(ret != 0)
         return ret;
 
     if(size == 0)
         size = DEFAULT_SHM_SIZE;
 
-    for(i=0; i<128; ++i ) {
-        info = wk->mesg +i;
+    for(i=0; i<wk->res_capacity; ++i) {
+        info = &wk->res[i].message;
+    /*for(i=0; i<128; ++i ) {
+        info = wk->mesg +i; */
         res = worker->mesg + i;
         if(info->inst_id == 0) {
             ret = lmsys_create_subscribe_message(res, inst_id, size);
@@ -152,7 +157,7 @@ lmsys_register_subscribe(lm_res_list_t*rr_list, lm_worker_res_t* worker, uint64_
         }
     }
 
-    eal_spin_unlock(&wk->lock);
+    eal_spin_unlock(&wk->board.lock);
     return ret;
 
 }
@@ -174,15 +179,17 @@ lmsys_register_subscribe_type(lm_resset_list_t*rr_list, lm_worker_res_t* worker,
 
 
     wk = (lm_worker_t *)worker->res.addr;
-    ret = eal_spin_trylock(&wk->lock);
+    ret = eal_spin_trylock(&wk->board.lock);
     if(ret != 0)
         return ret;
 
     if(size == 0)
         size = DEFAULT_SHM_SIZE;
 
-    for(i=0; i<128; ++i ) {
-        info = wk->mesg +i;
+    for(i=0; i<wk->res_capacity; ++i) {
+        info = &wk->res[i].message;
+    /*for(i=0; i<128; ++i ) {
+        info = wk->mesg +i;*/
         res = worker->mesg + i;
         if(info->inst_id == 0) {
             ret = lmsys_create_subscribe_message(res, type_id, size);
@@ -199,7 +206,7 @@ lmsys_register_subscribe_type(lm_resset_list_t*rr_list, lm_worker_res_t* worker,
         }
     }
 
-    eal_spin_unlock(&wk->lock);
+    eal_spin_unlock(&wk->board.lock);
     return ret;
 }
 
@@ -221,13 +228,15 @@ lmsys_register_timer(lm_worker_res_t* worker, eal_pid_t process_id, int period, 
 
     lmice_critical_print("lmsys_register_timer call register_timer\n");
     wk = (lm_worker_t *)worker->res.addr;
-    ret = eal_spin_trylock(&wk->lock);
+    ret = eal_spin_trylock(&wk->board.lock);
     if(ret != 0)
         return ret;
 
     ret = 1;
-    for(i=0; i<128; ++i ) {
-        info = wk->timer +i;
+    for(i=0; i<wk->res_capacity; ++i) {
+        info = &wk->res[i].timer;
+    /*for(i=0; i<128; ++i ) {
+        info = wk->timer +i;*/
         if(info->inst_id == 0) {
             ret = 0;
             info->type = TIMER_TYPE;
@@ -242,7 +251,7 @@ lmsys_register_timer(lm_worker_res_t* worker, eal_pid_t process_id, int period, 
         }
     }
 
-    eal_spin_unlock(&wk->lock);
+    eal_spin_unlock(&wk->board.lock);
 
     return ret;
 }

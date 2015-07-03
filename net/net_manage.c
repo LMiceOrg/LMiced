@@ -191,9 +191,13 @@ int lmnet_beatheart_destroy(lm_res_param_t *pm);
 int create_network_server(lm_res_param_t *pm)
 {
     int ret = 0;
+    lm_worker_res_t *worker = pm->res_worker;
+    eal_inc_param *bhpm = &(pm->bh_param);
 
     /* init network */
     ret = eal_inc_init();
+
+
 
     /* create beatheart service */
     ret = lmnet_beatheart_create(pm);

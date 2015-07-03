@@ -32,7 +32,10 @@ struct eal_inc_param_s
     char remote_addr[64];
 
     int ttl;
-    int padding0;
+    /*
+     * group-communication, point-to-point
+    */
+    int mode;
 
     eal_socket_t sock_client;
     eal_socket_t sock_server;
