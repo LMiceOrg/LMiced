@@ -72,10 +72,14 @@ enum lmice_timer_state_e
 
 struct lmice_time_s
 {
+    /* 墙上时间 单位：100ns */
     int64_t system_time;
     /* 10000 --> 1:1,  100 --> 0.01, 1e6 --> 100:1 */
     int64_t tick_rate;
+    /* 物理时间 单位:100ns */
     int64_t tick_time;
+    /* 物理时间开始时的墙上时间；
+    仿真时间 ＝ 墙上时间 － 物理开始时间 */
     int64_t tick_zero_time;
 };
 typedef struct lmice_time_s lm_time_t;

@@ -229,8 +229,9 @@ forceinline void update_time_and_tick(lm_time_param_t* pm)
 {
     lm_time_t*      pt = pm->pt;
 
-    /** update system time, every 32 milliseconds
-        update tick time when the tick_zero_time be set
+    /** get system time every 32 milliseconds
+     *  update system time every 1 millisecond
+     *  update tick time when the tick_zero_time be set
     */
     if((pm->count & 0x1f) == 0)
     {
@@ -251,7 +252,7 @@ forceinline void update_time_and_tick(lm_time_param_t* pm)
         }
     }
 
-    pm->count ++;
+    ++ pm->count;
 }
 
 forceinline void schedule_timer_and_ticker(lm_res_param_t* pm)

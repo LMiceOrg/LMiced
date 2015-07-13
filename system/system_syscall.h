@@ -205,7 +205,7 @@ lmsys_register_subscribe_type(lm_resset_list_t*rr_list, lm_worker_res_t* worker,
 
 /** register timer event */
 forceinline int
-lmsys_register_timer(lm_worker_res_t* worker, eal_pid_t process_id, int period, int size, int due, uint64_t* event_id) {
+lmsys_register_timer(lm_worker_res_t* worker, eal_pid_t process_id, int period, uint32_t size, int due, uint64_t* event_id) {
 
     lm_timer_info_t *info = NULL;
     lm_worker_t * wk = NULL;

@@ -41,7 +41,7 @@ typedef struct lmice_ring_head_s lm_ring_hd;
 */
 
 /* initialize beatheart resource */
-int lmnet_beatheart_init(lmnet_bpkg_t *pkg)
+static int lmnet_beatheart_init(lmnet_bpkg_t *pkg)
 {
     int ret = 0;
     lmnet_bmsg_t *msg = &(pkg->msg);
@@ -81,7 +81,7 @@ int lmnet_beatheart_init(lmnet_bpkg_t *pkg)
  * dispatch received data to IO event-poll
 */
 
-int lmnet_beatheart_recv(void* task, void* pdata) {
+static int lmnet_beatheart_recv(void* task, void* pdata) {
     size_t i = 0;
     lmnet_bpkg_t* bh_pkg = NULL;
     eal_aio_data_t *data = (eal_aio_data_t *)pdata;
@@ -102,6 +102,7 @@ int lmnet_beatheart_recv(void* task, void* pdata) {
     }
 
     lmice_debug_print("receive a new beatheart\n");
+    return 0;
 }
 
 /** client mode beartheart routine
@@ -110,7 +111,7 @@ int lmnet_beatheart_recv(void* task, void* pdata) {
  * timely send [this] node beatheart package
 */
 
-int lmnet_beatheart_send(void* task, void* pdata) {
+static int lmnet_beatheart_send(void* task, void* pdata) {
     lm_res_param_t *res_param = (lm_res_param_t *)pdata;
     lmnet_bpkg_t* bh_pkg = res_param->bh_list;
     struct addrinfo* remote = res_param->bh_param.remote;
@@ -127,7 +128,7 @@ int lmnet_beatheart_send(void* task, void* pdata) {
     sz=sendto(sock, bh_pkg, sizeof(lmnet_bpkg_t), 0, remote->ai_addr, remote->ai_addrlen);
     if(sz == -1) {
         ret = errno;
-        lmice_error_print("lmnet_beatheart_send call sendto failed[%d]\n", ret, remote->ai_addrlen);
+        lmice_error_print("lmnet_beatheart_send call sendto failed[%d]\n", ret);
     } else {
         lmice_debug_print("lmnet_beatheart_send successfully finished\n");
     }
