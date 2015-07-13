@@ -88,9 +88,9 @@ LIBS += -lws2_32 -lKernel32
 
 win32-msvc* {
 message("LMiced - Windows MSVC")
-DEFINES += _USING_V110_SDK71_
-INCLUDEPATH += "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Include"
-LIBS += -L"C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Lib/x64"
+#DEFINES += _USING_V110_SDK71_
+#INCLUDEPATH += "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Include"
+#LIBS += -L"C:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Lib/x64"
 
 #QMAKE_CFLAGS += -std=c89
 DEFINES += inline=__inline
@@ -102,19 +102,19 @@ QMAKE_CFLAGS_RELEASE -= -MD
 QMAKE_CFLAGS_DEBUG += /MTd /O2 -DSTDC89
 QMAKE_CFLAGS_RELEASE += /MT /O2 -DSTDC89
 
-INCLUDEPATH += ../lib/jansson-2.7/build/include ../lib/sglib-1.0.4
+INCLUDEPATH += ../../lib/jansson-2.7/build/include ../lib/sglib-1.0.4
 
 CONFIG(debug, debug|release) {
 message("debug mode")
-LIBS += -L../build/debug
+LIBS += -L../../../build-src/build/debug
 }
 
 CONFIG(release, debug|release) {
-LIBS += -L../build/release
+LIBS += -L../build-src/build/release
 }
 
-LIBS += -lWinmm -lsrc -L../lib/jansson-2.7/build/lib/Release -ljansson
-LIBS += -lws2_32 -lKernel32
+LIBS += -lWinmm -lsrc -L../../../lib/jansson-2.7/build/lib/Release -ljansson
+LIBS += -lws2_32 -lKernel32 -lIphlpapi
 }
 
 macx-clang*{

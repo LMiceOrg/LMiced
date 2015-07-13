@@ -373,3 +373,12 @@ int eal_shm_hash_name(uint64_t hval, char *name)
 
     return 0;
 }
+
+
+int eal_shm_create_or_open(lmice_shm_t *shm)
+{
+    int ret =eal_shm_create(shm);
+    if(ret != 0)
+        ret = eal_shm_open_readwrite(shm);
+    return ret;
+}

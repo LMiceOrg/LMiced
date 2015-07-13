@@ -50,6 +50,10 @@ forceinline int eal_thread_create(HANDLE* thread, lm_thread_ctx_t* ctx)
 #define eal_set_tls_value(key, val) TlsSetValue(key, val)
 #define eal_delete_tls(key) TlsFree(key)
 
+#define eal_thread_join(trd, ret) do {\
+    (void)trd;  \
+    (void)ret;  \
+    }while(0)
 
 #endif /** LMICE_EAL_THREAD_WIN_H */
 

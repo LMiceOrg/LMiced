@@ -231,7 +231,7 @@ forceinline void stop_task_threads(lm_res_param_t* pm) {
     }
 
     for(i = 0; i < pm->taskproc_size; ++ i) {
-        pthread_join( pm->taskproc_thread[i], NULL );
+        eal_thread_join( pm->taskproc_thread[i], NULL );
     }
 }
 

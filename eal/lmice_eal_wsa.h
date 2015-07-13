@@ -193,7 +193,7 @@ forceinline void eal_wsa_hash(int mode, const char* local_addr, int laddr_len,
 
 forceinline int eal_wsa_tcp_connect(eal_wsa_service_param* pm)
 {
-
+    UNREFERENCED_PARAM(pm);
 }
 
 
