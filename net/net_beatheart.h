@@ -83,10 +83,10 @@ struct lmice_net_beatheart_package_s
     /* lmnet_ph_t */
     uint8_t  endian;
     uint8_t  padding;
-    uint16_t headlen;
-    uint16_t msglen;
     uint16_t version;
-    char meta_data[16]; /* i[b16]iiiiiii */
+    uint16_t subnet;
+    uint16_t msglen;
+    /* char meta[16];  i[b16]iiiiiii */
     lmnet_bmsg_t  msg;
 };
 typedef struct lmice_net_beatheart_package_s lmnet_bpkg_t;

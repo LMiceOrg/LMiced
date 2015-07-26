@@ -203,7 +203,8 @@ int create_network_server(lm_res_param_t *pm)
     ret = lmnet_beatheart_create(pm);
 
     /* create synctime service */
-    /* create pub-sub service */
+    /* Create pub-sub service(Multicast, Broadcast) */
+    /* Create request-reply service(TCP, UDP) */
 
     return ret;
 }

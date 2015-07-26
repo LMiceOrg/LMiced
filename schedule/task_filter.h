@@ -26,7 +26,7 @@
 #define LMICE_TASK_PROC_LEVEL3 3
 
 
-typedef int (* lmice_event_callback)(void* ptask, void* pdata);
+typedef int (* lmice_event_callback)(void* ctx, void* data);
 
 
 /* Filter condition */

@@ -50,9 +50,7 @@ int lmnet_beatheart_init(lmnet_bpkg_t *pkg)
     /* init package header */
     pkg->endian = eal_is_little_endian();
     pkg->padding = LMICE_PADDING_DEFAULT;
-    pkg->headlen = sizeof(lmnet_bpkg_t) - sizeof(lmnet_bmsg_t);
     pkg->version = LMICE_VERSION;
-    memcpy(pkg->meta_data, LMNET_BEATHEART_METADATA, sizeof(LMNET_BEATHEART_METADATA) -1);
 
     /* init message header */
     msg->sys_type = lmice_net_beatheart_type();

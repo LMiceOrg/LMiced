@@ -12,7 +12,9 @@ resource/resource_manage.c \
     net/net_manage.c \
     schedule/task_filter.c \
     schedule/filter_tls.c \
-    io/io_schedule.c
+    io/io_schedule.c \
+    net/net_group_address.c \
+    net/net_group_address_map.c
 #    main.cpp \
 #    resource/resource_shm.cpp \
 #    resource/resource_meta_data.c \
@@ -44,7 +46,10 @@ trust/trust_manage.h \
     schedule/task_filter.h \
     schedule/task.h \
     resource/message_resource.h \
-    schedule/filter_tls.h
+    schedule/filter_tls.h \
+    net/net_group_address.h \
+    net/net_group_address_map.h \
+    net/net_message_process.h
 #    system/system_environment.h \
 #    system/system_signal.h \
 #    system/system_environment_internal.h \
