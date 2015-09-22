@@ -24,7 +24,6 @@ int lmice_ring_destroy(lmice_ring_t *ring)
 
 static lmice_ring_t* begin(lm_ring* pr) {
     return pr->ring;
-    WNDPROC sa;
 }
 
 int eal_create_ring(lm_ring** ppring) {

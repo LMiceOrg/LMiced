@@ -25,7 +25,7 @@
  * 3. data-content
  * 3.1 data length
  * 3.2 content blob
- */
+ */ 
 
 struct lmice_net_package_header_s
 {
@@ -84,33 +84,46 @@ typedef struct lmice_net_address_s lmnet_addr;
 
 */
 
-/* 节点信息表：工作实例运行于特定节点,由心跳服务维护 */
+/* 节点字典表：工作实例运行于特定节点,由心跳服务维护 */
 struct lmice_net_node_s {
     uint64_t node_id;
     lmnet_addr address;
-    uint64_t work_type; /* 工作实例类型 */
-    uint64_t work_id;   /* 工作实例   */
+
 };
 
-/* 工作实例信息表: 消息类型和实例包含于特定工作实例，由心跳服务维护*/
-struct lmice_net_work_s {
-    uint64_t work_id;
-    uint64_t message_type;
-    uint64_t instance_id;
-};
-
-/* 消息主题表：由特定消息类型,消息实体的组合构成消息主题,由用户维护(运行前,运行中) */
+/* 主题字典表:由特定消息类型,消息实体的组合构成消息主题,由用户维护(运行前,运行中) */
 struct lmice_net_topic_s {
     uint64_t topic_id;
-    uint64_t message_type;
-    uint64_t instance_id; /* 0: any-instance */
+    lmnet_addr address;
 };
 
-/* 消息实体表：消息实例附属于特定消息类型 */
+/* 工作实例字典表 */
+struct lmice_net_work_s {
+    uint64_t work_id;   /* 工作实例   */
+    uint64_t work_type; /* 工作实例类型 */
+};
+
+/* 消息字典表：消息实例附属于特定消息类型 */
 struct lmice_net_message_s {
     uint64_t message_type;
     uint64_t instance_id;
 };
+
+/* 实例信息表: 消息类型和实例包含于特定工作实例，由心跳服务维护*/
+struct lmice_net_workinfo_s {
+    struct lmice_net_node_s node;
+    struct lmice_net_work_s work;
+    struct lmice_net_message_s mesg;
+
+};
+
+/* 主题信息表：由特定消息类型,消息实体的组合构成消息主题,由用户维护(运行前,运行中) */
+struct lmice_net_topicinfoinfo_s {
+    struct lmice_net_topic_s topic;
+    struct lmice_net_message_s mesg;
+};
+
+
 
 /* 地址映射表：类型对应分组地址 由用户维护，且平台自动分配 */
 #include "net_group_address_map.h"
