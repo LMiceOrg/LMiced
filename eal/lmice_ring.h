@@ -13,14 +13,30 @@
 #define MAX_MEMORY_BLOCK_COUNT 16
 
 /**
-"LMiced shared memory block one"
-
-GIID:36EE99391CA8AE12
+name: "LMiced shared memory block one"
+hash: 36EE99391CA8AE12
 */
+
 #define LMBLK_GID 0x36EE99391CA8AE12ULL
+#define LMBLK_DEFAULT_SIZE 4096
+
 /**
- *@brief 共享内存块
+ *@brief 共享内存块:
  *
+ * OS isolate memory and other resources for security and general purpose,
+ * here for performance purpose and in one publisher multiple subscribers perspective
+ * SO shared memroy and spin-lock
+ *
+ * Identity:
+ * user: a specified name [string]
+ *
+ * platform: fixed length id [uint64]
+ *
+ * app: the index in the table [uint32]
+ *
+ * id: fnv1a(name), the unique value by FNV-1a hash function, in the public SP-Ring
+ *
+ * index: the order in app's private SP-Ring
  */
 
 /**
@@ -32,12 +48,15 @@ typedef uint64_t lmice_mblock_id;
 /**
  * @brief lmice_mblock_fd 信息容器描述符，表示可访问的信息容器
  * 应用于框架与中间件层间调用通讯
+ *
+ * spring: sub-pub ring container
  */
-typedef uint64_t lmice_ring_t;
+typedef uint64_t lmspring_t;
 
 /**
  * @brief lmice_mblock_s 内存块结构
  * 应用于平台层
+ * the public SP-Ring store them, and at the same time the public SP-Ring is created in one mblock
  */
 struct lmice_mblock_s {
     uint64_t id;    /* 标识符 */
@@ -47,6 +66,14 @@ struct lmice_mblock_s {
     addr_t   addr;  /* 映射的进程地址 */
 };
 typedef struct lmice_mblock_s lmblk_t;
+
+/* create a new Shared memory block */
+int lmblk_create(lmblk_t* mblk);
+int lmblk_create2(uint64_t id, uint32_t size, shmfd_t* fd, addr_t* addr);
+
+/* Create a new SP-Ring container in the given memory block */
+int lmspr_create(lmblk_t* mblk);
+
 
 struct lmice_mb_desc_s {
     uint32_t            size;       /* total memory-block size */

@@ -82,3 +82,27 @@ int eal_ring_create(void* mem_address, uint32_t mem_size, uint32_t queue_length,
     return ret;
 
 }
+
+
+int lmblk_create(lmblk_t* mblk) {
+    int ret = 0;
+    lmice_shm_t st;
+
+    eal_shm_zero(&st);
+
+    eal_shm_hash_name(mblk->id, st.name);
+    st.size = mblk->size;
+
+    ret = eal_shm_create(&st);
+
+    mblk->addr = st.addr;
+    mblk->fd = st.fd;
+    mblk->rcount = 1;
+
+    return ret;
+}
+
+
+int lmspr_create(lmblk_t* mblk) {
+
+}

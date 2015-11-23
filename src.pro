@@ -107,3 +107,13 @@ mingw* {
 QMAKE_CFLAGS += -Winline
 
 }
+
+linux-* {
+message("Linux GCC")
+
+QMAKE_CFLAGS += -std=c89 -Wno-long-long -Wall
+QMAKE_CFLAGS += -funit-at-a-time -Wno-unused-function
+QMAKE_CFLAGS += -Dinline=__inline__
+
+QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
+}

@@ -113,7 +113,7 @@ int eal_event_wait_one(evtfd_t fd)
     return hr;
 }
 
-#elif defined(__APPLE__) || defined(__LINUX__)
+#elif defined(__APPLE__) || defined(linux)
 
 int eal_event_create(lmice_event_t* e) {
     int ret = 0;
