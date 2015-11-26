@@ -22,42 +22,39 @@ hash: 36EE99391CA8AE12
 
 /**
  *@brief 共享内存块:
+ * MBlock
  *
  * OS isolate memory and other resources for security and general purpose,
  * here for performance purpose and in one publisher multiple subscribers perspective
  * SO shared memroy and spin-lock
  *
- * Identity:
+ * Identity(name, id, index):
  * user: a specified name [string]
  *
  * platform: fixed length id [uint64]
+ * id = fnv1a(name), the unique value by FNV-1a hash function, in the public SP-Ring
  *
  * app: the index in the table [uint32]
- *
- * id: fnv1a(name), the unique value by FNV-1a hash function, in the public SP-Ring
- *
- * index: the order in app's private SP-Ring
+ * index = the order in app's private SP-Ring
  */
 
-/**
- * @brief lmice_mblock_id 共享内存块标识，唯一索引一块共享内存块
- * 应用于平台层与中间件层调用与通讯
- */
-typedef uint64_t lmice_mblock_id;
 
 /**
- * @brief lmice_mblock_fd 信息容器描述符，表示可访问的信息容器
- * 应用于框架与中间件层间调用通讯
+ *@brief 发布订阅环形状态容器:
+ * SP-Ring
  *
- * spring: sub-pub ring container
+ * The Subscribe-Publish Ring container(SP-Ring) presents the way of message sharing with many subscribers, publishers and one maintainer.
+ *
+ * The maintainer is unique in each computer(or VM).
+ *
+ * Subscribers and publishers are in different processes different computers(or VMs).
+ *
+ * Subers and Pubers use their SP-Ring to communicate with the maintainer, and vice versa.
+ * Event be used for invoking others to work (one-to-one model).
+ *
+ * suber to mainter
  */
-typedef uint64_t lmspring_t;
 
-/**
- * @brief lmice_mblock_s 内存块结构
- * 应用于平台层
- * the public SP-Ring store them, and at the same time the public SP-Ring is created in one mblock
- */
 struct lmice_mblock_s {
     uint64_t id;    /* 标识符 */
     uint32_t size;  /* 大小(Bytes) */
@@ -67,12 +64,50 @@ struct lmice_mblock_s {
 };
 typedef struct lmice_mblock_s lmblk_t;
 
-/* create a new Shared memory block */
-int lmblk_create(lmblk_t* mblk);
-int lmblk_create2(uint64_t id, uint32_t size, shmfd_t* fd, addr_t* addr);
+struct lmice_mblock_info_s {
+    uint64_t id;    /* unique identity */
+    uint32_t size;  /* size of bytes */
+    uint32_t flag;  /* attributes */
+};
+typedef struct lmice_mblock_info_s lmblk_info;
 
-/* Create a new SP-Ring container in the given memory block */
-int lmspr_create(lmblk_t* mblk);
+struct lmice_sp_ring_s {
+    /* description */
+    volatile int64_t    lock;   /* sync-purpose spinlock */
+    uint64_t            id;     /* identity */
+    uint32_t            type;   /* type */
+
+    uint32_t            blk_cnt;
+    lmblk_info          mblock[MAX_MEMORY_BLOCK_COUNT]; /* memory blocks, store lmice_mb_desc_s */
+
+    /* status list (fixed size) */
+
+    /* blocks of data(optional) */
+};
+typedef struct lmice_sp_ring_s lmspr_t;
+
+/** maintainer viewport */
+/* Create a new Shared memory block */
+int lmblk_create(lmblk_t* blk);
+int lmblk_open(lmblk_t* blk);
+int lmblk_close(lmblk_t* blk);
+int lmblk_delete(lmblk_t* blk);
+
+/* Create the SP-Ring container in the given memory block */
+int lmspr_create(lmblk_t* blk, uint64_t id, );
+int lmspr_load_config(const char* const name);
+int lmspr_delete(lmblk_t* blk);
+
+
+/** suber puber viewport */
+/* library initialize */
+int lmspr_init(int flag); /* initialize resource, thread only or not */
+int lmspr_exit(); /* deallocate resources */
+int lmspr_register_type(const char* const type, uint32_t max_size);
+int lmspr_register_publish(const char* const instance, const char* const type);
+int lmspr_register_subscribe_instance(const char* const instance, const char* const type, uint32_t stack_size);
+int lmspr_register_subscribe_type(const char* const type, uint32_t stack_size);
+int lmspr_register_subscribe_topic(const char* const topic, uint32_t stack_size);
 
 
 struct lmice_mb_desc_s {
