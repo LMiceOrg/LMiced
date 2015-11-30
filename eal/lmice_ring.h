@@ -71,6 +71,15 @@ struct lmice_mblock_info_s {
 };
 typedef struct lmice_mblock_info_s lmblk_info;
 
+struct lmice_sp_ring_status_s {
+    int64_t             timestamp;
+    uint32_t            status;
+    uint32_t            blk_id;
+    uint64_t            offset;
+
+};
+typedef struct lmice_sp_ring_status_s lmspr_st_t;
+
 struct lmice_sp_ring_s {
     /* description */
     volatile int64_t    lock;   /* sync-purpose spinlock */
@@ -78,9 +87,14 @@ struct lmice_sp_ring_s {
     uint32_t            type;   /* type */
 
     uint32_t            blk_cnt;
-    lmblk_info          mblock[MAX_MEMORY_BLOCK_COUNT]; /* memory blocks, store lmice_mb_desc_s */
+    lmblk_info          mblock[MAX_MEMORY_BLOCK_COUNT]; /* memory blocks*/
 
+    uint32_t            blkcount;                  /* 当前数据块数量 */
+    uint32_t            blksize;                   /* 数据块大小(bytes) */
+    uint32_t            capacity;                  /* 最大可读队列长度 */
+    uint32_t            length;                    /* 当前可读队列长度 */
     /* status list (fixed size) */
+    lmspr_st_t          st[1];                     /* capacity spr_sts */
 
     /* blocks of data(optional) */
 };
@@ -94,20 +108,27 @@ int lmblk_close(lmblk_t* blk);
 int lmblk_delete(lmblk_t* blk);
 
 /* Create the SP-Ring container in the given memory block */
-int lmspr_create(lmblk_t* blk, uint64_t id, );
+int lmspr_create(lmblk_t* blk, uint64_t id, uint32_t type, uint32_t blkcount, uint32_t blksize,
+                 uint32_t capacity, lmspr_t **pps);
 int lmspr_load_config(const char* const name);
 int lmspr_delete(lmblk_t* blk);
 
 
 /** suber puber viewport */
-/* library initialize */
+/* initialize api */
 int lmspr_init(int flag); /* initialize resource, thread only or not */
 int lmspr_exit(); /* deallocate resources */
-int lmspr_register_type(const char* const type, uint32_t max_size);
+/* register api */
 int lmspr_register_publish(const char* const instance, const char* const type);
-int lmspr_register_subscribe_instance(const char* const instance, const char* const type, uint32_t stack_size);
-int lmspr_register_subscribe_type(const char* const type, uint32_t stack_size);
-int lmspr_register_subscribe_topic(const char* const topic, uint32_t stack_size);
+int lmspr_register_subscribe_instance(const char* const instance, const char* const type, uint32_t capacity);
+int lmspr_register_subscribe_type(const char* const type, uint32_t capacity);
+int lmspr_register_subscribe_topic(const char* const topic, uint32_t capacity);
+/* type api */
+int lmspr_type_create(const char* const type, uint32_t max_size);
+/* topic api */
+int lmspr_topic_create(const char* const topic, const char* address, const char* port);
+int lmspr_topic_add_instance(const char* const topic, const char* const instance, const char* const type);
+int lmspr_topic_add_type(const char* const topic, const char* const type);
 
 
 struct lmice_mb_desc_s {

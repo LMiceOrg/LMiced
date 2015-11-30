@@ -103,6 +103,31 @@ int lmblk_create(lmblk_t* blk) {
 }
 
 
-int lmspr_create(lmblk_t* blk) {
 
+
+int lmspr_create(lmblk_t *blk, uint64_t id, uint32_t type, uint32_t blkcount, uint32_t blksize, uint32_t capacity, lmspr_t **pps)
+{
+    int ret = 0;
+    lmspr_t *ps = NULL;
+
+
+    if(blk->size < sizeof(lmspr_t)+sizeof(lmspr_st_t)*capacity ) {
+        ret = E2BIG;
+    } else {
+        memset(blk->addr, 0, blk->size);
+        ps = (lmspr_t*)blk->addr;
+        ps->id = id;
+        ps->type = type;
+        ps->blk_cnt = 1;
+        ps->mblock[0].id = blk->id;
+        ps->mblock[0].size = blk->size;
+        ps->mblock[0].flag = 0;
+        ps->blkcount =blkcount;
+        ps->blksize = blksize;
+        ps->capacity = (blk->size - sizeof(lmspr_t))/sizeof(lmspr_st_t);
+        *pps = ps;
+    }
+
+
+    return ret;
 }
