@@ -15,7 +15,8 @@ SOURCES += eal/lmice_ring.c \
     eal/lmice_core.c \
     eal/lmice_eal_inc.c \
     eal/lmice_eal_aio.c \
-    eal/lmice_eal_thread.c
+    eal/lmice_eal_thread.c \
+    eal/lmice_bloomfilter.c
 
 
 OTHER_FILES += \
@@ -24,7 +25,8 @@ OTHER_FILES += \
     test/eal_endian_test.py \
     test/eal_shm_test.py \
     test/eal_hash_test.py \
-    test/global_defines.py
+    test/global_defines.py \
+    message.txt
 
 HEADERS += \
     eal/lmice_core.h \
@@ -50,7 +52,8 @@ HEADERS += \
     eal/lmice_eal_inc.h \
     eal/lmice_eal_aio.h \
     eal/lmice_eal_kqueue.h \
-    eal/lmice_eal_rwlock.h
+    eal/lmice_eal_rwlock.h \
+    eal/lmice_bloomfilter.h
 
 #Common config
 INCLUDEPATH += eal

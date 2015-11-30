@@ -6,6 +6,14 @@
 #include "eal/lmice_eal_common.h"
 #include "eal/lmice_eal_atomic.h"
 
+/** 消息处理分类（主题，类型，实例）
+ *
+ * 主题：包含一组类型(Type,...)及一组实例(Inst,Type),...，按类型订阅与按实例订阅的组合
+ * 类型：包含一组实例的同类消息(Type)， 按实例订阅的组合（索引列表）
+ * 实例：包含特定实例的消息(Inst, Type)，环形容器
+  */
+
+
 #define LMICE_MSG_BLOB_AVAILABLE 0
 #define LMICE_MSG_BLOB_SHARED_USING 1
 #define LMICE_MSG_BLOB_UNIQUE_USING 2
