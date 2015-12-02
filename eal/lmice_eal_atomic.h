@@ -37,7 +37,8 @@
 #define eal_compare_and_swap32(ptr, oldval, newval) InterlockedCompareExchange(ptr, newval, oldval)
 #define eal_compare_and_swap64(ptr, oldval, newval) InterlockedCompareExchange64(ptr, newval, oldval)
 
-#define eal_increase(pval) InterlockedIncrement(pval)
+#define eal_increment(pval) InterlockedIncrement(pval)
+#define eal_decrement(pval) InterlockedDecrement(pval)
 #define eal_xadd(pval, newval) InterlockedExchange(pval, newval)
 #else
     #error(No atomic implementation!)

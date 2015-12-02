@@ -49,7 +49,8 @@ trust/trust_manage.h \
     schedule/filter_tls.h \
     net/net_group_address.h \
     net/net_group_address_map.h \
-    net/net_message_process.h
+    net/net_message_process.h \
+    eal/tmp_ring.h
 #    system/system_environment.h \
 #    system/system_signal.h \
 #    system/system_environment_internal.h \

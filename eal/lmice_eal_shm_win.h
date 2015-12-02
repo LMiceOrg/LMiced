@@ -1,9 +1,9 @@
 #ifndef LMICE_EAL_SHM_WIN_H
 #define LMICE_EAL_SHM_WIN_H
 
-#include "lmice_eal_common.h"
+
 #include <stdint.h>
-typedef HANDLE  shmfd_t;
+typedef void*   shmfd_t;
 typedef void*   addr_t;
 #ifdef _W64
 struct lmice_shm_s
