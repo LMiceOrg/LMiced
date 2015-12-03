@@ -3,6 +3,7 @@
 #include "lmice_eal_spinlock.h"
 #include "lmice_eal_atomic.h"
 #include "lmice_eal_hash.h"
+#include "lmice_eal_rwlock.h"
 
 #include <stdlib.h>
 #include <errno.h>
@@ -11,6 +12,7 @@
 int lmblk_create(lmblk_info *info, lmblk_t* blk) {
     int ret = 0;
     lmice_shm_t st;
+
 
     eal_shm_zero(&st);
 
