@@ -33,7 +33,7 @@ extern eal_tls_t task_filter_key;
 #include "schedule/task.h"
 
 
-#define ANY_INSTANCE_ID 0LLU
+#define ANY_INSTANCE_ID 0
 
 #define PUBLISH_RESOURCE_TYPE  1
 #define SUBSCRIBE_RESOURCE_TYPE  2
@@ -69,6 +69,18 @@ enum lmice_timer_state_e
     LM_TIMER_DELETE = 1
 
 };
+
+struct lmice_resource_board_s
+{
+    uint16_t version;
+    uint16_t state;
+    uint32_t size;      /* size (bytes) of board */
+    uint64_t next_id;   /* next instance identity, zero(0) means no extra instance block */
+    volatile int64_t lock;
+    uint64_t inst_id;   /* 实例编号 board instance */
+    uint64_t type_id;   /* 类型编号 board type     */
+};
+typedef struct lmice_resource_board_s lm_board_t;
 
 struct lmice_time_s
 {
@@ -151,9 +163,10 @@ struct lmice_timer_info_s
 {
     uint32_t type;              /* ticker timer */
     uint32_t size;              /* 触发计数量 1 --> one-shot  0 --> infinite */
+    uint64_t inst_id;           /* 实例编号 */
     int64_t period;             /* 周期长度 */
     int64_t due;                /* 预期开始时间, -1 立即开始, 0 下周期开始 */
-    uint64_t inst_id;           /* 实例编号 */
+
     lm_timer_t  timer;          /* 定时器状态 */
 };
 typedef struct lmice_timer_info_s lm_timer_info_t;
@@ -178,8 +191,8 @@ struct lmice_message_info_s
 {
     uint32_t        type;       /* publish; subscribe by instance or subscribe by type */
     uint32_t        size;       /* size */
-    int64_t         period;     /* message publish  period tick, zero(0) means no period */
     uint64_t inst_id;           /* 实例编号 (决定了 响应事件与共享内存编号) */
+    int64_t         period;     /* message publish  period tick, zero(0) means no period */
     uint64_t type_id;           /* 类型编号 */
     lm_state_t state;           /* 状态 */
 };
@@ -210,26 +223,27 @@ struct lmice_event_info_s
 
 typedef struct lmice_event_info_s lm_evt_info_t;
 
+union lmice_resource_info_s
+{
+    lm_mesg_info_t message;
+    lm_timer_info_t timer;
+    lm_action_info_t action;
+};
+typedef union lmice_resource_info_s lm_res_info_t;
+
 /**
  * @brief The lmice_worker_s struct
  * 应用软件/模型
  */
 struct lmice_worker_s
 {
-    uint32_t version;
-    uint32_t size;
-    uint32_t state;
-    uint32_t reserved;
-    /* next instance identity, zero(0) means no extra instance block */
-    uint64_t next_id;
-
-    volatile int64_t lock;
-    uint64_t inst_id;   /* 实例编号 */
-    uint64_t type_id;   /* 类型编号 */
-
-    lm_mesg_info_t      mesg[128];
-    lm_timer_info_t     timer[128];
-    lm_action_info_t    action[128];
+    lm_board_t board;       /* inherit from board */
+    uint32_t res_capacity;  /* 可用资源总数量 capacity of resource info */
+    uint32_t res_size;      /* 已用资源数量 */
+    lm_res_info_t res[1];
+//    lm_mesg_info_t      mesg[128];
+//    lm_timer_info_t     timer[128];
+//    lm_action_info_t    action[128];
 };
 typedef struct lmice_worker_s lm_worker_t;
 
@@ -244,8 +258,9 @@ typedef struct lmice_worker_s lm_worker_t;
 struct lmice_worker_info_s
 {
     /* The instance version*/
-    uint32_t version;
-    uint32_t state; /* fine modified dead*/
+    uint16_t version;
+    uint16_t state; /* fine modified dead*/
+    uint32_t size;
 
     /* worker process id if equal to zero(0) means rtspace maintain the resource and thread-level instance */
     int32_t process_id;
@@ -275,21 +290,14 @@ typedef struct lmice_worker_resource_s lm_worker_res_t;
 
 struct lmice_server_s
 {
-    /* always be 1, the info struct version */
-    uint32_t version;
-    /* server shm block size*/
-    uint32_t size;
-    /* next server info identity, zero(0) means no extra server info block */
-    uint64_t next_id;
-
-    /* lock */
-    volatile int64_t lock;
-    /* event identity */
-    uint64_t event_id;
+    /* inherit from board */
+    lm_board_t board;
     /* system/tick time resource */
     lm_time_t tm;
-    /* worker(client) instances info list */
-    lm_worker_info_t worker;
+    /* worker(client) instance(s) info list */
+    uint32_t worker_capacity;
+    uint32_t worker_size;
+    lm_worker_info_t worker[1];
 };
 typedef struct lmice_server_s lm_server_t;
 

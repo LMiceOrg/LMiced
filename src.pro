@@ -15,7 +15,8 @@ SOURCES += eal/lmice_ring.c \
     eal/lmice_core.c \
     eal/lmice_eal_inc.c \
     eal/lmice_eal_aio.c \
-    eal/lmice_eal_thread.c
+    eal/lmice_eal_thread.c \
+    eal/lmice_bloomfilter.c
 
 
 OTHER_FILES += \
@@ -50,7 +51,8 @@ HEADERS += \
     eal/lmice_eal_inc.h \
     eal/lmice_eal_aio.h \
     eal/lmice_eal_kqueue.h \
-    eal/lmice_eal_rwlock.h
+    eal/lmice_eal_rwlock.h \
+    eal/lmice_bloomfilter.h
 
 #Common config
 INCLUDEPATH += eal
@@ -104,4 +106,14 @@ mingw* {
 
 QMAKE_CFLAGS += -Winline
 
+}
+
+linux-* {
+message("Linux GCC")
+
+QMAKE_CFLAGS += -std=c89 -Wno-long-long -Wall
+QMAKE_CFLAGS += -funit-at-a-time -Wno-unused-function
+QMAKE_CFLAGS += -Dinline=__inline__
+
+QMAKE_CFLAGS_DEBUG += -DDEBUG -D_DEBUG
 }

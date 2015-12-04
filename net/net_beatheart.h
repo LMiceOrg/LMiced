@@ -64,6 +64,7 @@ typedef struct lmice_net_beatheart_data_content_s lmnet_bctn_t;
 #define LMICE_NET_CFG_IPV4 0
 #define LMICE_NET_CFG_IPV6 (1<<0)
 #define LMICE_NET_CFG_AREA(x) (x) << 24  /* x in range[0, 255] */
+#define LMICE_NET_CFG_SUBNET(x) (x) << 16   /* x in range [0, 255] */
 
 
 struct lmice_net_beatheart_message_s
@@ -82,10 +83,10 @@ struct lmice_net_beatheart_package_s
     /* lmnet_ph_t */
     uint8_t  endian;
     uint8_t  padding;
-    uint16_t headlen;
-    uint16_t msglen;
     uint16_t version;
-    char meta_data[16]; /* i[b16]iiiiiii */
+    uint16_t subnet;
+    uint16_t msglen;
+    /* char meta[16];  i[b16]iiiiiii */
     lmnet_bmsg_t  msg;
 };
 typedef struct lmice_net_beatheart_package_s lmnet_bpkg_t;

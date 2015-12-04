@@ -27,6 +27,12 @@
 #define eal_compare_and_swap32(ptr, oldval, newval) __sync_val_compare_and_swap(ptr, oldval, newval)
 #define eal_compare_and_swap64(ptr, oldval, newval) __sync_val_compare_and_swap(ptr, oldval, newval)
 
+#define eal_xadd(pval, newval) __sync_fetch_and_add(pval, newval)
+
+#define eal_cpu_nop() asm("nop")
+
+#define eal_increment(pval) eal_xadd(pval, 1)
+#define eal_decrement(pval) __sync_fetch_and_sub(pval, 1)
 
 #elif defined(_MSC_VER)
 #define eal_fetch_and_add32(ptr, value) InterlockedExchangeAdd(ptr, value)
@@ -37,7 +43,8 @@
 #define eal_compare_and_swap32(ptr, oldval, newval) InterlockedCompareExchange(ptr, newval, oldval)
 #define eal_compare_and_swap64(ptr, oldval, newval) InterlockedCompareExchange64(ptr, newval, oldval)
 
-#define eal_increase(pval) InterlockedIncrement(pval)
+#define eal_increment(pval) InterlockedIncrement(pval)
+#define eal_decrement(pval) InterlockedDecrement(pval)
 #define eal_xadd(pval, newval) InterlockedExchange(pval, newval)
 #else
     #error(No atomic implementation!)

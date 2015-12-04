@@ -36,7 +36,7 @@ forceinline void eal_rwlock_wunlock(eal_rwticket_t *l)
     eal_rwticket_t t = *l;
 
     /*barrier();*/
-    MemoryBarrier();
+    eal_synchronize();
 
     t.s.write++;
     t.s.read++;
@@ -59,16 +59,16 @@ forceinline int eal_rwlock_wtrylock(eal_rwticket_t *l)
 
 forceinline void eal_rwlock_rlock(eal_rwticket_t *l)
 {
-    unsigned me = eal_fetch_and_add32(&l->u, (1<<16));
+    unsigned me = eal_xadd(&l->u, (1<<16));
     unsigned char val = me >> 16;
 
-    while (val != l->s.read) cpu_relax();
+    while (val != l->s.read) eal_cpu_nop();
     l->s.read++;
 }
 
 forceinline void eal_rwlock_runlock(eal_rwticket_t *l)
 {
-    eal_increase(&l->s.write);
+    eal_increment(&l->s.write);
 }
 
 forceinline int eal_rwlock_rtrylock(eal_rwticket_t *l)

@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#if defined(__APPLE__) || defined(__LINUX__)
+#if defined(__APPLE__) || defined(linux)
 
 forceinline
 int eal_shm_open_existing_with_mode(lmice_shm_t* shm, int mode)
@@ -266,12 +266,16 @@ int eal_shm_create(lmice_shm_t* shm)
                 shm->size,               // maximum object size (low-order DWORD)
                 shm->name);              // name of mapping object
 
-    if (hMapFile == NULL)
-    {
+    if (hMapFile == NULL) {
         DWORD err = GetLastError();
         lmice_error_print("Could not create file mapping object (%lu).\n", err);
         return 1;
+    } else if (hMapFile != NULL && GetLastError() == ERROR_ALREADY_EXISTS) {
+        lmice_error_print("The file mapping object already exists(%lu).\n", ERROR_ALREADY_EXISTS);
+        CloseHandle(hMapFile);
+        return 1;
     }
+
 
     pBuf = MapViewOfFile(
                 hMapFile,               // handle to map object

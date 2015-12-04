@@ -53,6 +53,13 @@ struct eal_iocp_data_list_s
 };
 typedef struct eal_iocp_data_list_s eal_iocp_data_list;
 
+/**
+  eal_iocp_create_data_list
+  eal_iocp_destroy_data_list
+  eal_iocp_append_data
+  eal_iocp_remove_data
+ */ 
+
 forceinline int eal_iocp_create_data_list(eal_iocp_data_list** pb)
 {
     *pb = (eal_iocp_data_list*)malloc( sizeof(eal_iocp_data_list) );

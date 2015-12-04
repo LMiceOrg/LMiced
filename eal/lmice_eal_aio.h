@@ -37,6 +37,7 @@ forceinline int eal_aio_create(eal_aio_t* thd, lm_aio_ctx_t* ctx)
 {
     (void)thd;
     (void)ctx;
+    eal_aio_free_context(ctx);
     return 0;
 }
 

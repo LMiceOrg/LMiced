@@ -203,7 +203,7 @@ forceinline int lmres_add_subscribe_right_list(uint64_t* size, uint64_t** pplist
         ret = LMRES_ERR_SUCCESS;
     } else {
         *size += LMICE_RESOURCE_RIGHT_SUBLIST_SIZE;
-        sub_worker = malloc((*size)*sizeof(uint64_t));
+        sub_worker = (uint64_t*)malloc((*size)*sizeof(uint64_t));
         memcpy(sub_worker, *pplist, ((*size) - LMICE_RESOURCE_RIGHT_SUBLIST_SIZE)*sizeof(uint64_t));
         free(*pplist);
         *pplist = sub_worker;
@@ -465,7 +465,7 @@ forceinline int lmresset_add_object(uint64_t* size, uint64_t** pp_list, uint64_t
     } else {
         /* create new */
         *size += LMICE_RESOURCE_RIGHT_OBJLIST_SIZE;
-        obj_id = malloc((*size)*sizeof(uint64_t));
+        obj_id = (uint64_t*)malloc((*size)*sizeof(uint64_t));
         memcpy(obj_id, *pp_list, ((*size) - LMICE_RESOURCE_RIGHT_SUBLIST_SIZE)*sizeof(uint64_t));
         free(*pp_list);
         *pp_list = obj_id;
