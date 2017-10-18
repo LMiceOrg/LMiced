@@ -1,0 +1,7 @@
+{
+    "version":1
+    ,"name":"SshShell"
+    ,"copyright":"Copyright 2017"
+    ,"type":2
+    ,"menu":["Tools|SshClient"]
+}

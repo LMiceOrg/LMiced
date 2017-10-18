@@ -21,8 +21,6 @@ eal_tls_t task_filter_key;
 
 int main(int argc, char* argv[]) {
 
-    eal_create_tls(&task_filter_key);
-
     if(argc > 1) {
         if(strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
             printf("LMiced: Version 1.0\n");
@@ -33,6 +31,8 @@ int main(int argc, char* argv[]) {
         lm_res_param_t* res_param = NULL;
         lm_trust_t m_trust;
 
+        /* Thread Local Storage key for task thread */
+        eal_create_tls(&task_filter_key);
 
         /* 资源管理服务 */
         res_param = (lm_res_param_t*)malloc(sizeof(lm_res_param_t));
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
         memcpy(bh->remote_addr, "230.0.0.1", 9);
         memcpy(bh->remote_port, "30001", 5);
         }
-        //ret = create_network_server(res_param);
+        /* ret = create_network_server(res_param); */
         if(ret != 0) {
             lmice_critical_print("Create inter-node communication service failed[%d]\n", ret);
             return 1;
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
 
         getchar();
 
-        //stop_network_server(res_param);
+        /* stop_network_server(res_param); */
         stop_trust_thread(&m_trust);
         destroy_schedule_service(res_param);
         destroy_resource_service(res_param);
@@ -88,10 +88,11 @@ int main(int argc, char* argv[]) {
 
         free(res_param);
 
+        eal_delete_tls(task_filter_key);
+        lmice_critical_print("LMiced shutdown service\n");
     }
 
-    eal_delete_tls(task_filter_key);
-    lmice_critical_print("LMiced shutdown service\n");
+
     return 0;
 }
 

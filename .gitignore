@@ -32,3 +32,5 @@
 
 # Temp file
 *.pro.user
+
+*.user

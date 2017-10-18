@@ -1,8 +1,10 @@
 #include "lmice_eal_event.h"
 #include "lmice_trace.h"
 #include "lmice_eal_hash.h"
+#include "lmice_eal_common.h"
 #include <string.h>
 #include <errno.h>
+#include <stdint.h>
 
 forceinline
 void hash_to_nameA(uint64_t hval, char* name)

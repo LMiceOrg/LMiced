@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+    <link rel="stylesheet" href="/Users/hehao/Downloads/mermaid-master/dist/mermaid.forest.css" />
+    <!--link rel="stylesheet" href="/Users/hehao/Downloads/mermaid-master/dist/mermaid.forest.css" /-->
+    <script src="/Users/hehao/Downloads/mermaid-master/dist/mermaid.js"></script>
+    <script src="/Users/hehao/work/lib/saveSvgAsPng/saveSvgAsPng.js"></script>
+<script>
+var img;
+
+function savePng(id) {
+var name = id + ".png";
+var svg = document.getElementById(id).children[0];
+
+var style = svg.getElementsByTagName('style')[0];
+style.innerHTML +=".cluster rect {fill: #cdffb2 !important;rx: 4  !important;stroke: #6eaa49 !important;stroke-width: 1px !important;}"+
+".cluster text {fill: #333;} ";
+
+
+//var link = document.createElement("style");
+//link.href = "/Users/hehao/Downloads/mermaid-master/dist/mermaid.forest.css";
+//link.rel = "stylesheet";
+//link.type = "text/css";
+//svg.appendChild(link);
+
+var ctx = svg.outerHTML;
+ctx1 = ctx.replace(new RegExp("[&]lt;","gm"), '<').replace(new RegExp("[&]gt;","gm"), '>');
+ctx2 = ctx1.replace(new RegExp("[<]br[>]","gm"), '<br/>').replace(new RegExp("[&]nbsp;","gm"), ' ');
+//console.log(ctx2);
+
+
+//img = document.getElementById("img");
+img = new Image();
+img.src ="data:image/svg+xml," +  ctx2;
+document.getElementById('hidden_div').appendChild(img);
+
+setTimeout( function() {savePng2(id);}, 100);
+
+}
+function savePng2(id)
+{
+var name = id + ".png";
+var canvas = document.getElementById('thecanvas');  //准备空画布
+canvas.width = img.width;
+canvas.height = img.height;
+var context = canvas.getContext('2d');  //取得画布的2d绘图上下文
+context.drawImage(img, 0, 0);
+//document.getElementsByTagName('body')[0].appendChild(canvas);
+console.log(img.width);
+
+var a = document.getElementById('anchor');
+//var a = document.createElement('a');
+a.href = canvas.toDataURL('image/png');//.replace("image/png", 'data:application/octet-stream');  //将画布内的信息导出为png图片数据
+a.download = name;  //设定下载名称
+a.click(); //点击触发下载
+//console.log(canvas.toDataURL("image/svg"));
+
+//var d=canvas.toDataURL("image/png");
+//var w=window.open('about:blank','image from canvas');
+//w.document.write("<img src='"+d+"' alt=name/>");
+//window.open(canvas.toDataURL('image/png'));
+
+//document.getElementsByTagName('body')[0].removeChild(img);
+//document.removeChild(canvas);
+//document.removeChild(a);
+
+
+
+document.getElementById('hidden_div').innerHTML="";
+}
+
+
+</script>
+<style>
+.default1 {
+font-size:18px;
+background-color:red;
+text-align:center;
+font-family: 'trebuchet ms', verdana, arial;
+}
+
+body {
+    background: #fefaf5;
+}
+
+</style>
+</head>
+<body>
+
+<div hidden="hidden" >
+<a id="anchor">
+<img id="img">
+
+<canvas id="thecanvas"></canvas>
+</div>
+
+IDE 开发流程
+<a href="#" onClick="savePng('ide_proc');">Save PNG</a>
+
+<div class="mermaid" id="ide_proc">
+
+graph LR
+a -->|打开|b
+                subgraph 可视化插件
+
+                b-->|提取特征|c
+
+
+                end
+                subgraph 翻译插件
+                c-->|转换|d
+                end
+                subgraph 验证插件
+                d-->|审核|e
+                d-->|验证|e
+                d-->|运行|e
+                end
+                e-->|编译打包|f
+                a["<br>源程序<br>Markdown<br>#nbsp;#nbsp;<br>"]
+                b("<br>高亮显示<br>Highlight<br>#nbsp;#nbsp;<br>")
+                c("<br>语法提示<br>Python/C<br>#nbsp;#nbsp;<br>")
+                d("<br>目的代码<br>#nbsp;#nbsp;<br>")
+                e("<br>分析结果<br>#nbsp;#nbsp;<br>")
+                f["<br>软件包<br>#nbsp;#nbsp;<br>"]
+                class a,b,c,d,e,f default1;
+                classDef default stroke:darkcyan,stroke-width:2px,fill:white;
+                linkStyle 0 fill:white,stroke:cyan,stroke-width:2px;
+                linkStyle 1 fill:white,stroke:cyan,stroke-width:2px;
+                linkStyle 2 fill:white,stroke:cyan,stroke-width:2px;
+                linkStyle 3 fill:white,stroke:cyan,stroke-width:2px;
+                linkStyle 4 fill:white,stroke:cyan,stroke-width:2px;
+                linkStyle 5 fill:white,stroke:cyan,stroke-width:2px;
+                linkStyle 6 fill:white,stroke:cyan,stroke-width:2px;
+
+
+
+</div>
+IDE 功能<a href="#" onClick="savePng('ide_func');">Save PNG</a>
+<div class="mermaid" id="ide_func">
+%%mermaid
+graph TD
+
+a0["代码管理#nbsp;"]-.->a(文件版本管理<br>项目管理<br>工程管理)
+b0["插件框架#nbsp;"]-.->b(公共服务<br>基础插件<br>定制扩展)
+class a0,b0 default1;
+classDef default stroke:darkcyan,stroke-width:2px,fill:white;
+
+</div>
+<div id="hidden_div" width="1" height="1"></div>
+
+<span>[hehao@localhost ~]$ </span>
+<span>ls<br></span>
+</body>
+</html>

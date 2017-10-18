@@ -2,6 +2,8 @@
 #define LMICE_EAL_SOCKET_H
 
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "eal/lmice_eal_common.h"
 
@@ -25,7 +27,7 @@ struct lmice_socket_data_s
     uint64_t inst_id;
     int state;
     eal_socket_t nfd;
-    SOCKADDR_STORAGE addr;
+/*    SOCKADDR_STORAGE addr; */
 };
 typedef struct lmice_socket_data_s lm_socket_dt;
 

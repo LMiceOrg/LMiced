@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#if defined(__APPLE__) || defined(__LINUX__)
+#if defined(__APPLE__) || defined(__linux__)
 
 forceinline
 int eal_shm_open_existing_with_mode(lmice_shm_t* shm, int mode)
@@ -374,11 +374,3 @@ int eal_shm_hash_name(uint64_t hval, char *name)
     return 0;
 }
 
-
-int eal_shm_create_or_open(lmice_shm_t *shm)
-{
-    int ret =eal_shm_create(shm);
-    if(ret != 0)
-        ret = eal_shm_open_readwrite(shm);
-    return ret;
-}

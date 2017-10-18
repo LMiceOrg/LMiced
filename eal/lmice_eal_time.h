@@ -84,14 +84,14 @@ forceinline int eal_timer_delete(dispatch_source_t timer)
     return 0;
 }
 
-#elif defined(__LINUX__) || defined(__MINGW32__)
+#elif defined(__linux__) || defined(__MINGW32__)
 
 #include <unistd.h>
 #include <time.h>
 #include <stdint.h>
 
 /*POSIX.1-2001*/
-forceinline static int  get_system_time(int64_t* t)
+forceinline int  get_system_time(int64_t* t)
 {
     int ret = 0;
     struct timespec tp;

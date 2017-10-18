@@ -3,7 +3,7 @@
 
 #include "lmice_eal_common.h"
 #include <stdint.h>
-#if defined(__LINUX__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__)
 #include <semaphore.h>
 typedef sem_t* evtfd_t;
 struct lmice_event_s

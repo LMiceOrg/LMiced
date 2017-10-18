@@ -1,6 +1,6 @@
 #include "lmice_eal_aio.h"
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) && defined(__MACH__)
 
 void* eal_aio_thread(void* pdata) {
     lm_aio_ctx_t* ctx = (lm_aio_ctx_t*)pdata;

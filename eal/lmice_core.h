@@ -154,7 +154,7 @@ forceinline void eal_core_get_properties(uint32_t* lcore, uint32_t* mem, uint32_
     eal_core_get_net_bandwidth("en0", net_bandwidth);
 }
 
-#elif defined(__LINUX__)
+#elif defined(__linux__)
 
 #include <stdio.h>
 #include <sys/socket.h>

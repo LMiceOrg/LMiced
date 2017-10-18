@@ -1,0 +1,7 @@
+{
+    "version":1
+    ,"name":"WebShell"
+    ,"copyright":"Copyright 2017"
+    ,"type":2
+    ,"menu":["Tools|WebShell"]
+}

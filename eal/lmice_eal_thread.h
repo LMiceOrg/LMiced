@@ -36,7 +36,7 @@ typedef int32_t  eal_pid_t;
 
 #endif
 
-#if defined(__LINUX__) || defined(USE_POSIX_THREAD)
+#if defined(__linux__) || defined(USE_POSIX_THREAD)
 
 #include "lmice_eal_thread_pthread.h"
 
